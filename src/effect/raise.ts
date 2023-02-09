@@ -16,15 +16,12 @@ export function run<T>(comp: E.Effectful<T>): E.Effectful<Result<T, unknown>> {
     retc(value) {
       return { ok: true, value };
     },
-    errc(error): Result<T, unknown> {
+    errc(error) {
       return { ok: false, error };
     },
     effc(eff) {
       if (eff instanceof Raise) {
-        // deno-lint-ignore require-yield
-        return function* (_) {
-          return { ok: false, error: eff.error };
-        };
+        return (_) => E.pure({ ok: false, error: eff.error });
       }
       return null;
     },
