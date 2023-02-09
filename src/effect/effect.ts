@@ -16,8 +16,10 @@ export type Handler<T, S> = {
   effc(eff: Effect): ((k: Continuation<unknown, S>) => Effectful<S>) | null;
 };
 
+export function pure(): Effectful<void>;
+export function pure<T>(x: T): Effectful<T>;
 // deno-lint-ignore require-yield
-export function* pure<T>(x: T): Effectful<T> {
+export function* pure<T>(x?: T): Effectful<T | void> {
   return x;
 }
 
