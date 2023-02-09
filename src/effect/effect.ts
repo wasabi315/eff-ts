@@ -1,8 +1,13 @@
 export class Effect<T = unknown> {
-  #_!: T;
+  #T!: T;
+
   toString() {
     return this.constructor.name;
   }
+}
+
+export class LabeledEffect<L extends string, T = unknown> extends Effect<T> {
+  #L!: L;
 }
 
 export type UnEffect<E> = E extends Effect<infer T> ? T : never;

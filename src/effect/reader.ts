@@ -1,7 +1,7 @@
 import * as E from "./effect.ts";
 
-export function Reader<E>() {
-  class Ask extends E.Effect<E> {}
+export function Reader<L extends string, E>() {
+  class Ask extends E.LabeledEffect<L, E> {}
 
   const ask = () => E.perform(new Ask());
 
@@ -18,5 +18,6 @@ export function Reader<E>() {
       },
     });
   }
+
   return { ask, run };
 }

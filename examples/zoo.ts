@@ -7,9 +7,9 @@ import {
   Defer as D,
 } from "../src/effect.ts";
 
-const S1 = State<string>();
-const S2 = State<number>();
-const R1 = Reader<number>();
+const S1 = State<"S1", string>();
+const S2 = State<"S2", number>();
+const R1 = Reader<"R1", number>();
 
 function* main() {
   yield* D.defer(() => console.log("defer 1"));

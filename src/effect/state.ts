@@ -1,8 +1,8 @@
 import * as E from "./effect.ts";
 
-export function State<S>() {
-  class Get extends E.Effect<S> {}
-  class Put extends E.Effect<void> {
+export function State<L extends string, S>() {
+  class Get extends E.LabeledEffect<L, S> {}
+  class Put extends E.LabeledEffect<L, void> {
     constructor(public state: S) {
       super();
     }
@@ -27,6 +27,7 @@ export function State<S>() {
         }
         if (eff instanceof Put) {
           return (k) => {
+            // TODO: Why eff.state: any here?
             state = eff.state;
             return k.continue();
           };
