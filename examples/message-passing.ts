@@ -10,7 +10,7 @@ const exchange = (msg: string) => E.perform(new Exchange(msg));
 
 type Status<E1 extends E.Effect> =
   | { done: true }
-  | { done: false; msg: string; cont: E.Continuation<E1, unknown, Status<E1>> };
+  | { done: false; msg: string; cont: E.Continuation<E1, string, Status<E1>> };
 
 function step<E1 extends E.Effect>(
   task: E.Effectful<E1, void>
