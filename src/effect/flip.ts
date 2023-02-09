@@ -9,9 +9,7 @@ function createRunner(f: () => boolean) {
     return E.tryWith(comp, {
       effc(eff) {
         if (eff instanceof Flip) {
-          return function* (k) {
-            return yield* k.continue(f());
-          };
+          return (k) => k.continue(f());
         }
         return null;
       },

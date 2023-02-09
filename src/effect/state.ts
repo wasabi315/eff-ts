@@ -20,14 +20,12 @@ export function State<S>() {
     return E.tryWith<T>(comp, {
       effc(eff) {
         if (eff instanceof Get) {
-          return function* (k) {
-            return yield* k.continue(state);
-          };
+          return (k) => k.continue(state);
         }
         if (eff instanceof Put) {
-          return function* (k) {
+          return (k) => {
             state = eff.state;
-            return yield* k.continue();
+            return k.continue();
           };
         }
         return null;

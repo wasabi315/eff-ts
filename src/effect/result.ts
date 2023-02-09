@@ -21,7 +21,7 @@ export function run<T>(comp: E.Effectful<T>): E.Effectful<Result<T, unknown>> {
     },
     effc(eff) {
       if (eff instanceof Err) {
-        return (_) => E.pure({ ok: false, error: eff.error });
+        return (_k) => E.pure({ ok: false, error: eff.error });
       }
       return null;
     },

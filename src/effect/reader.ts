@@ -9,9 +9,7 @@ export function Reader<E>() {
     return E.tryWith(comp, {
       effc(eff) {
         if (eff instanceof Ask) {
-          return function* (k) {
-            return yield* k.continue(env);
-          };
+          return (k) => k.continue(env);
         }
         return null;
       },

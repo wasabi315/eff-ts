@@ -21,9 +21,9 @@ export function run<T>(comp: E.Effectful<T>): E.Effectful<T> {
     },
     effc(eff) {
       if (eff instanceof Defer) {
-        return function* (k) {
+        return (k) => {
           thunks.unshift(eff.thunk);
-          return yield* k.continue();
+          return k.continue();
         };
       }
       return null;
