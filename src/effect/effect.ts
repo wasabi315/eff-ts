@@ -10,7 +10,12 @@ export class LabeledEffect<L extends string, T = unknown> extends Effect<T> {
   #L!: L;
 }
 
-export type UnEffect<E> = E extends Effect<infer T> ? T : never;
+export type UnEffect<E extends Effect> = E extends Effect<infer T> ? T : never;
+
+export type EffectConstructor<E extends Effect> = {
+  // deno-lint-ignore no-explicit-any
+  new (...args: any[]): E;
+};
 
 export type Effectful<E extends Effect, T> = Generator<E, T>;
 
@@ -18,10 +23,15 @@ export type Continuation<E extends Effect, T, S> = {
   continue(...arg: [] | [T]): Effectful<E, S>;
 };
 
+type RegisterEffectHandler<E2 extends Effect, S> = <E extends Effect>(
+  eff: EffectConstructor<E>,
+  handle: (eff: E, k: Continuation<E2, UnEffect<E>, S>) => Effectful<E2, S>
+) => void;
+
 export type Handler<E1 extends Effect, E2 extends Effect, T, S> = {
   retc(x: T): S;
   errc(err: unknown): S;
-  effc(eff: E1): ((k: Continuation<E2, unknown, S>) => Effectful<E2, S>) | null;
+  effc(when: RegisterEffectHandler<E2, S>): void;
 };
 
 export function pure(): Effectful<never, void>;
@@ -49,6 +59,19 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
   comp: Effectful<E1, T>,
   handlers: Handler<E1, E2, T, S>
 ): Effectful<E2, S> {
+  const effc = (
+    eff: E1
+  ): ((k: Continuation<E2, unknown, S>) => Effectful<E2, S>) | null => {
+    let handler = null;
+    const match: RegisterEffectHandler<E2, S> = (ctor, h) => {
+      if (eff instanceof ctor) {
+        handler = (k: Continuation<E2, unknown, S>) => h(eff, k);
+      }
+    };
+    handlers.effc(match);
+    return handler;
+  };
+
   function* attachHandlers(comp: Effectful<E1, T>): Effectful<E2, S> {
     let prev = null;
 
@@ -64,7 +87,7 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
         return handlers.retc(res.value);
       }
 
-      const handler = handlers.effc(res.value);
+      const handler = effc(res.value);
       if (handler === null) {
         prev = yield res.value as unknown as E2;
         continue;

@@ -21,18 +21,12 @@ export function State<L extends string, S>() {
   ): E.Effectful<Exclude<E1, Get | Put>, T> {
     let state: S = init;
     return E.tryWith<E1, Exclude<E1, Get | Put>, T>(comp, {
-      effc(eff) {
-        if (eff instanceof Get) {
-          return (k) => k.continue(state);
-        }
-        if (eff instanceof Put) {
-          return (k) => {
-            // TODO: Why eff.state: any here?
-            state = eff.state;
-            return k.continue();
-          };
-        }
-        return null;
+      effc(when) {
+        when(Get, (_eff, k) => k.continue(state));
+        when(Put, (eff, k) => {
+          state = eff.state;
+          return k.continue();
+        });
       },
     });
   }

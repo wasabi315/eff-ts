@@ -22,11 +22,10 @@ function step<E1 extends E.Effect>(
     errc(err) {
       throw err;
     },
-    effc(eff) {
-      if (eff instanceof Exchange) {
-        return (k) => E.pure({ done: false, msg: eff.msg, cont: k });
-      }
-      return null;
+    effc(when) {
+      when(Exchange, (eff, k) => {
+        return E.pure({ done: false, msg: eff.msg, cont: k });
+      });
     },
   });
 }

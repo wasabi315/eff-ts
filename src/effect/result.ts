@@ -23,11 +23,8 @@ export function run<E1 extends E.Effect, T>(
     errc(error) {
       return { ok: false, error };
     },
-    effc(eff) {
-      if (eff instanceof Err) {
-        return (_k) => E.pure({ ok: false, error: eff.error });
-      }
-      return null;
+    effc(when) {
+      when(Err, (eff, _k) => E.pure({ ok: false, error: eff.error }));
     },
   });
 }

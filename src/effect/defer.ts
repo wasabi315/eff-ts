@@ -23,14 +23,11 @@ export function run<E1 extends E.Effect, T>(
       thunks.forEach((thunk) => thunk());
       throw err;
     },
-    effc(eff) {
-      if (eff instanceof Defer) {
-        return (k) => {
-          thunks.unshift(eff.thunk);
-          return k.continue();
-        };
-      }
-      return null;
+    effc(when) {
+      when(Defer, (eff, k) => {
+        thunks.unshift(eff.thunk);
+        return k.continue();
+      });
     },
   });
 }

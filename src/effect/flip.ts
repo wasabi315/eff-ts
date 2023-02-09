@@ -11,11 +11,8 @@ function createRunner(f: () => boolean) {
     comp: E.Effectful<E1, T>
   ): E.Effectful<Exclude<E1, Flip>, T> => {
     return E.tryWith(comp, {
-      effc(eff) {
-        if (eff instanceof Flip) {
-          return (k) => k.continue(f());
-        }
-        return null;
+      effc(when) {
+        when(Flip, (_eff, k) => k.continue(f()));
       },
     });
   };
