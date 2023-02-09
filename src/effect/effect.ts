@@ -6,7 +6,10 @@ export class Effect<T = unknown> {
   }
 }
 
-export class LabeledEffect<L extends string, T = unknown> extends Effect<T> {
+export class LabeledEffect<
+  L extends string extends L ? never : string,
+  T = unknown
+> extends Effect<T> {
   #L!: L;
 }
 

@@ -1,6 +1,6 @@
 import * as E from "./effect.ts";
 
-export function Reader<L extends string, E>() {
+export function Reader<L extends string extends L ? never : string, E>() {
   class Ask extends E.LabeledEffect<L, E> {}
 
   const ask = () => E.perform(new Ask());

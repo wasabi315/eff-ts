@@ -1,6 +1,6 @@
 import * as E from "./effect.ts";
 
-export function State<L extends string, S>() {
+export function State<L extends string extends L ? never : string, S>() {
   class Get extends E.LabeledEffect<L, S> {}
   class Put extends E.LabeledEffect<L, void> {
     constructor(public state: S) {
