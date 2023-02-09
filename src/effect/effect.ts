@@ -1,33 +1,53 @@
-export class Effect {
+export class Effect<T = unknown> {
+  #T!: T;
+
   toString() {
     return this.constructor.name;
   }
 }
 
-export type Effectful<T> = Generator<Effect, T>;
+export class LabeledEffect<L extends string, T = unknown> extends Effect<T> {
+  #L!: L;
+}
 
-export type Continuation<T, S> = {
-  continue(...arg: [] | [T]): Effectful<S>;
+export type UnEffect<E extends Effect> = E extends Effect<infer T> ? T : never;
+
+export type EffectConstructor<E extends Effect> = {
+  // deno-lint-ignore no-explicit-any
+  new (...args: any[]): E;
 };
 
-export type Handler<T, S> = {
+export type Effectful<E extends Effect, T> = Generator<E, T>;
+
+export type Continuation<E extends Effect, T, S> = {
+  continue(arg: T): Effectful<E, S>;
+};
+
+type RegisterEffectHandler<E2 extends Effect, S> = <E extends Effect>(
+  eff: EffectConstructor<E>,
+  handle: (eff: E, k: Continuation<E2, UnEffect<E>, S>) => Effectful<E2, S>
+) => void;
+
+export type Handler<E1 extends Effect, E2 extends Effect, T, S> = {
   retc(x: T): S;
   errc(err: unknown): S;
-  effc(eff: Effect): ((k: Continuation<unknown, S>) => Effectful<S>) | null;
+  effc(when: RegisterEffectHandler<E2, S>): void;
 };
 
-export function pure(): Effectful<void>;
-export function pure<T>(x: T): Effectful<T>;
+export function pure(): Effectful<never, void>;
+export function pure<T>(x: T): Effectful<never, T>;
 // deno-lint-ignore require-yield
-export function* pure<T>(x?: T): Effectful<T | void> {
+export function* pure<T>(x?: T): Effectful<never, void | T> {
   return x;
 }
 
-export function* perform<T>(eff: Effect): Effectful<T> {
-  return (yield eff) as T;
+export function* perform<E extends Effect<unknown>>(
+  eff: E
+): Effectful<E, UnEffect<E>> {
+  return (yield eff) as UnEffect<E>;
 }
 
-export function run<T>(comp: Effectful<T>): T {
+export function run<T>(comp: Effectful<never, T>): T {
   const { value, done } = comp.next();
   if (!done) {
     throw new Error(`Unhandled Effect: ${value}`);
@@ -35,11 +55,24 @@ export function run<T>(comp: Effectful<T>): T {
   return value;
 }
 
-export function matchWith<T, S>(
-  comp: Effectful<T>,
-  handlers: Handler<T, S>
-): Effectful<S> {
-  function* attachHandlers(comp: Effectful<T>): Effectful<S> {
+export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
+  comp: Effectful<E1, T>,
+  handlers: Handler<E1, E2, T, S>
+): Effectful<E2, S> {
+  const effc = (
+    eff: E1
+  ): ((k: Continuation<E2, unknown, S>) => Effectful<E2, S>) | null => {
+    let handler = null;
+    const match: RegisterEffectHandler<E2, S> = (ctor, h) => {
+      if (eff instanceof ctor) {
+        handler = (k: Continuation<E2, unknown, S>) => h(eff, k);
+      }
+    };
+    handlers.effc(match);
+    return handler;
+  };
+
+  function* attachHandlers(comp: Effectful<E1, T>): Effectful<E2, S> {
     let prev = null;
 
     while (true) {
@@ -54,9 +87,9 @@ export function matchWith<T, S>(
         return handlers.retc(res.value);
       }
 
-      const handler = handlers.effc(res.value);
+      const handler = effc(res.value);
       if (handler === null) {
-        prev = yield res.value;
+        prev = yield res.value as unknown as E2;
         continue;
       }
 
@@ -64,7 +97,7 @@ export function matchWith<T, S>(
     }
   }
 
-  function createCont(comp: Effectful<T>): Continuation<unknown, S> {
+  function createCont(comp: Effectful<E1, T>): Continuation<E2, unknown, S> {
     let resumed = false;
     return {
       continue(...x) {
@@ -80,11 +113,11 @@ export function matchWith<T, S>(
   return attachHandlers(comp);
 }
 
-export const tryWith = <T>(
-  comp: Effectful<T>,
-  handlers: Pick<Handler<T, T>, "effc">
-): Effectful<T> =>
-  matchWith<T, T>(comp, {
+export const tryWith = <E1 extends Effect, E2 extends Effect, T>(
+  comp: Effectful<E1, T>,
+  handlers: Pick<Handler<E1, E2, T, T>, "effc">
+): Effectful<E2, T> =>
+  matchWith<E1, E2, T, T>(comp, {
     retc(x) {
       return x;
     },
@@ -94,7 +127,10 @@ export const tryWith = <T>(
     effc: handlers.effc,
   });
 
-function* _continue<T>(k: Effectful<T>, ...x: [] | [unknown]): Effectful<T> {
+function* _continue<E extends Effect, T>(
+  k: Effectful<E, T>,
+  ...x: [] | [unknown]
+): Effectful<E, T> {
   let prev = x[0];
   while (true) {
     const { value, done } = k.next(prev);

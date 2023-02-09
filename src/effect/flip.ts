@@ -1,17 +1,18 @@
 import * as E from "./effect.ts";
 
-class Flip extends E.Effect {}
+class Flip extends E.Effect<boolean> {}
 
-export const flip = () => E.perform<boolean>(new Flip());
+export { type Flip };
+
+export const flip = () => E.perform(new Flip());
 
 function createRunner(f: () => boolean) {
-  return <T>(comp: E.Effectful<T>): E.Effectful<T> => {
+  return <E1 extends E.Effect, T>(
+    comp: E.Effectful<E1, T>
+  ): E.Effectful<Exclude<E1, Flip>, T> => {
     return E.tryWith(comp, {
-      effc(eff) {
-        if (eff instanceof Flip) {
-          return (k) => k.continue(f());
-        }
-        return null;
+      effc(when) {
+        when(Flip, (_eff, k) => k.continue(f()));
       },
     });
   };
