@@ -12,7 +12,7 @@ export type Continuation<T, S> = {
 
 export type Handler<T, S> = {
   retc(x: T): S;
-  errc(err: Error): S;
+  errc(err: unknown): S;
   effc(eff: Effect): ((k: Continuation<unknown, S>) => Effectful<S>) | null;
 };
 
