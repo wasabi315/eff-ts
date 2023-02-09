@@ -20,7 +20,7 @@ export type EffectConstructor<E extends Effect> = {
 export type Effectful<E extends Effect, T> = Generator<E, T>;
 
 export type Continuation<E extends Effect, T, S> = {
-  continue(...arg: [] | [T]): Effectful<E, S>;
+  continue(arg: T): Effectful<E, S>;
 };
 
 type RegisterEffectHandler<E2 extends Effect, S> = <E extends Effect>(
