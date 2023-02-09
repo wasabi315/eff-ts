@@ -1,18 +1,20 @@
 import { Effect as E } from "../src/effect.ts";
 
-class Exchange extends E.Effect {
+class Exchange extends E.Effect<string> {
   constructor(public msg: string) {
     super();
   }
 }
 
-const exchange = (msg: string) => E.perform<string>(new Exchange(msg));
+const exchange = (msg: string) => E.perform(new Exchange(msg));
 
-type Status =
+type Status<E1 extends E.Effect> =
   | { done: true }
-  | { done: false; msg: string; cont: E.Continuation<unknown, Status> };
+  | { done: false; msg: string; cont: E.Continuation<E1, unknown, Status<E1>> };
 
-function step(task: E.Effectful<void>): E.Effectful<Status> {
+function step<E1 extends E.Effect>(
+  task: E.Effectful<E1, void>
+): E.Effectful<Exclude<E1, Exchange>, Status<Exclude<E1, Exchange>>> {
   return E.matchWith(task, {
     retc() {
       return { done: true };
@@ -29,10 +31,10 @@ function step(task: E.Effectful<void>): E.Effectful<Status> {
   });
 }
 
-function* runBoth(
-  steps1: E.Effectful<Status>,
-  steps2: E.Effectful<Status>
-): E.Effectful<void> {
+function* runBoth<E1 extends E.Effect>(
+  steps1: E.Effectful<E1, Status<E1>>,
+  steps2: E.Effectful<E1, Status<E1>>
+): E.Effectful<E1, void> {
   const [status1, status2] = [yield* steps1, yield* steps2];
   if (status1.done && status2.done) {
     return;
@@ -46,7 +48,7 @@ function* runBoth(
   throw new Error("Improper synchronization");
 }
 
-function* task(name: string, msg: string): E.Effectful<void> {
+function* task(name: string, msg: string): E.Effectful<Exchange, void> {
   if (msg.length === 0) {
     console.log(`${name}: exiting`);
     return;

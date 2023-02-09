@@ -1,16 +1,20 @@
 import * as E from "./effect.ts";
 
-class Defer extends E.Effect {
+class Defer extends E.Effect<void> {
   constructor(public thunk: () => void) {
     super();
   }
 }
 
-export const defer = (thunk: () => void) => E.perform<void>(new Defer(thunk));
+export { type Defer };
 
-export function run<T>(comp: E.Effectful<T>): E.Effectful<T> {
+export const defer = (thunk: () => void) => E.perform(new Defer(thunk));
+
+export function run<E1 extends E.Effect, T>(
+  comp: E.Effectful<E1, T>
+): E.Effectful<Exclude<E1, Defer>, T> {
   const thunks: (() => void)[] = [];
-  return E.matchWith<T, T>(comp, {
+  return E.matchWith(comp, {
     retc(x) {
       thunks.forEach((thunk) => thunk());
       return x;

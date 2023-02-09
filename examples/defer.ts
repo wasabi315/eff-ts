@@ -1,6 +1,6 @@
 import { Effect as E, Defer as D } from "../src/effect.ts";
 
-function* main(): E.Effectful<void> {
+function* main(): E.Effectful<D.Defer, void> {
   console.log("counting");
   for (let i = 0; i < 10; i++) {
     yield* D.defer(() => console.log(i));

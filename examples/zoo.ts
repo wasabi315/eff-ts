@@ -11,7 +11,7 @@ const S1 = State<string>();
 const S2 = State<number>();
 const R1 = Reader<number>();
 
-function* main(): E.Effectful<number> {
+function* main() {
   yield* D.defer(() => console.log("defer 1"));
   console.log(yield* S1.get(), yield* S2.get());
   yield* S1.modify((str) => str + ", world!");
