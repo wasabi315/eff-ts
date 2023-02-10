@@ -138,16 +138,14 @@ export const tryWith = <E1 extends Effect, E2 extends Effect, T>(
     effc: handlers.effc,
   });
 
-function* _continue<E extends Effect, T>(
+function _continue<E extends Effect, T>(
   k: Effectful<E, T>,
   x?: unknown
 ): Effectful<E, T> {
-  let prev = x;
-  while (true) {
-    const { value, done } = k.next(prev);
-    if (done) {
-      return value;
-    }
-    prev = yield value;
-  }
+  const next = k.next.bind(k);
+  k.next = () => {
+    k.next = next;
+    return next(x);
+  };
+  return k;
 }
