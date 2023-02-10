@@ -13,35 +13,35 @@ export class LabeledEffect<
   #_L!: L;
 }
 
-type UnEffect<E extends Effect> = E extends Effect<infer T> ? T : never;
+type EffReturnType<E extends Effect> = E extends Effect<infer T> ? T : never;
 
-type EffectConstructor<E extends Effect> = {
+type EffConstructor<E extends Effect> = {
   // deno-lint-ignore no-explicit-any
   new (...args: any[]): E;
 };
 
 export type Effectful<E extends Effect, T> = Generator<E, T>;
 
-export type Continuation<E extends Effect, T, S> = {
+export type Continuation<T, E extends Effect, S> = {
   continue(arg: T): Effectful<E, S>;
 };
 
-type EffectHandler<E extends Effect, E1 extends Effect, S> = (
+type EffHandler<E extends Effect, EHandled extends Effect, S> = (
   eff: E,
-  k: Continuation<E1, UnEffect<E>, S>
-) => Effectful<E1, S>;
+  k: Continuation<EffReturnType<E>, EHandled, S>
+) => Effectful<EHandled, S>;
 
-type RegisterEffectHandler<E1 extends Effect, E2 extends Effect, S> = <
-  E extends E2
+type SetEffHandler<E extends Effect, EHandle extends Effect, S> = <
+  E1 extends EHandle
 >(
-  eff: EffectConstructor<E>,
-  handle: EffectHandler<E, Exclude<E1, E2>, S>
+  eff: EffConstructor<E1>,
+  handle: EffHandler<E1, Exclude<E, EHandle>, S>
 ) => void;
 
-export type Handler<E1 extends Effect, E2 extends Effect, T, S> = {
+export type Handlers<E extends Effect, EHandle extends Effect, T, S> = {
   retc(x: T): S;
   errc(err: unknown): S;
-  effc(when: RegisterEffectHandler<E1, E2, S>): void;
+  effc(when: SetEffHandler<E, EHandle, S>): void;
 };
 
 export function pure(): Effectful<never, void>;
@@ -53,8 +53,8 @@ export function* pure<T>(x?: T): Effectful<never, void | T> {
 
 export function* perform<E extends Effect<unknown>>(
   eff: E
-): Effectful<E, UnEffect<E>> {
-  return (yield eff) as UnEffect<E>;
+): Effectful<E, EffReturnType<E>> {
+  return (yield eff) as EffReturnType<E>;
 }
 
 export function run<T>(comp: Effectful<never, T>): T {
@@ -65,25 +65,27 @@ export function run<T>(comp: Effectful<never, T>): T {
   return value;
 }
 
-export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
-  comp: Effectful<E1, T>,
-  handlers: Handler<E1, E2, T, S>
-): Effectful<Exclude<E1, E2>, S> {
-  type E3 = Exclude<E1, E2>;
+export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
+  comp: Effectful<E, T>,
+  handlers: Handlers<E, EHandle, T, S>
+): Effectful<Exclude<E, EHandle>, S> {
+  type EHandled = Exclude<E, EHandle>;
 
   const effc = (
-    eff: E1
-  ): ((k: Continuation<E3, unknown, S>) => Effectful<E3, S>) | null => {
+    eff: E
+  ):
+    | ((k: Continuation<unknown, EHandled, S>) => Effectful<EHandled, S>)
+    | null => {
     let matched = null;
     handlers.effc((ctor, handler) => {
       if (eff instanceof ctor) {
-        matched = (k: Continuation<E3, unknown, S>) => handler(eff, k);
+        matched = (k: Continuation<unknown, EHandled, S>) => handler(eff, k);
       }
     });
     return matched;
   };
 
-  function* attachHandlers(comp: Effectful<E1, T>): Effectful<E3, S> {
+  function* attachHandlers(comp: Effectful<E, T>): Effectful<EHandled, S> {
     let prev = null;
 
     while (true) {
@@ -100,7 +102,7 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
 
       const handler = effc(res.value);
       if (handler === null) {
-        prev = yield res.value as unknown as E3;
+        prev = yield res.value as unknown as EHandled;
         continue;
       }
 
@@ -108,15 +110,17 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
     }
   }
 
-  function createCont(comp: Effectful<E1, T>): Continuation<E3, unknown, S> {
+  function createCont(
+    comp: Effectful<E, T>
+  ): Continuation<unknown, EHandled, S> {
     let resumed = false;
     return {
-      continue(...x) {
+      continue(x) {
         if (resumed) {
           throw new Error("Continuation already resumed");
         }
         resumed = true;
-        return attachHandlers(_continue(comp, ...x));
+        return attachHandlers(_continue(comp, x));
       },
     };
   }
@@ -124,11 +128,11 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
   return attachHandlers(comp);
 }
 
-export const tryWith = <E1 extends Effect, E2 extends Effect, T>(
-  comp: Effectful<E1, T>,
-  handlers: Pick<Handler<E1, E2, T, T>, "effc">
-): Effectful<Exclude<E1, E2>, T> =>
-  matchWith<E1, E2, T, T>(comp, {
+export const tryWith = <E extends Effect, EHandle extends Effect, T>(
+  comp: Effectful<E, T>,
+  handlers: Pick<Handlers<E, EHandle, T, T>, "effc">
+): Effectful<Exclude<E, EHandle>, T> =>
+  matchWith<E, EHandle, T, T>(comp, {
     retc(x) {
       return x;
     },
@@ -140,7 +144,7 @@ export const tryWith = <E1 extends Effect, E2 extends Effect, T>(
 
 function _continue<E extends Effect, T>(
   k: Effectful<E, T>,
-  x?: unknown
+  x: unknown
 ): Effectful<E, T> {
   const next = k.next.bind(k);
   k.next = () => {

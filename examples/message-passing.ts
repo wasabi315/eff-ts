@@ -1,19 +1,23 @@
-import { Effect as E } from "../src/effect.ts";
+import { Effect as Eff } from "../src/effect.ts";
 
-class Exchange extends E.Effect<string> {
+class Exchange extends Eff.Effect<string> {
   constructor(public msg: string) {
     super();
   }
 }
 
-const exchange = (msg: string) => E.perform(new Exchange(msg));
+const exchange = (msg: string) => Eff.perform(new Exchange(msg));
 
-type Status<E1 extends E.Effect> =
+type Status<E extends Eff.Effect> =
   | { done: true }
-  | { done: false; msg: string; cont: E.Continuation<E1, string, Status<E1>> };
+  | {
+      done: false;
+      msg: string;
+      cont: Eff.Continuation<string, E, Status<E>>;
+    };
 
-function step<E1 extends E.Effect>(task: E.Effectful<E1, void>) {
-  return E.matchWith<E1, Exchange, void, Status<Exclude<E1, Exchange>>>(task, {
+function step<E extends Eff.Effect>(task: Eff.Effectful<E, void>) {
+  return Eff.matchWith<E, Exchange, void, Status<Exclude<E, Exchange>>>(task, {
     retc() {
       return { done: true };
     },
@@ -22,16 +26,16 @@ function step<E1 extends E.Effect>(task: E.Effectful<E1, void>) {
     },
     effc(when) {
       when(Exchange, (eff, k) => {
-        return E.pure({ done: false, msg: eff.msg, cont: k });
+        return Eff.pure({ done: false, msg: eff.msg, cont: k });
       });
     },
   });
 }
 
-function* runBoth<E1 extends E.Effect>(
-  steps1: E.Effectful<E1, Status<E1>>,
-  steps2: E.Effectful<E1, Status<E1>>
-): E.Effectful<E1, void> {
+function* runBoth<E extends Eff.Effect>(
+  steps1: Eff.Effectful<E, Status<E>>,
+  steps2: Eff.Effectful<E, Status<E>>
+): Eff.Effectful<E, void> {
   const [status1, status2] = [yield* steps1, yield* steps2];
   if (status1.done && status2.done) {
     return;
@@ -45,7 +49,7 @@ function* runBoth<E1 extends E.Effect>(
   throw new Error("Improper synchronization");
 }
 
-function* task(name: string, msg: string): E.Effectful<Exchange, void> {
+function* task(name: string, msg: string): Eff.Effectful<Exchange, void> {
   if (msg.length === 0) {
     console.log(`${name}: exiting`);
     return;
@@ -60,4 +64,4 @@ function* task(name: string, msg: string): E.Effectful<Exchange, void> {
 
 const task1 = task("A", "Effect");
 const task2 = task("B", "Handle");
-E.run(runBoth(step(task1), step(task2)));
+Eff.run(runBoth(step(task1), step(task2)));

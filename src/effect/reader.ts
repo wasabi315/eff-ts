@@ -1,12 +1,12 @@
-import * as E from "./effect.ts";
+import * as Eff from "./effect.ts";
 
-export function Reader<L extends string extends L ? never : string, E>() {
-  class Ask extends E.LabeledEffect<L, E> {}
+export function Reader<L extends string extends L ? never : string, R>() {
+  class Ask extends Eff.LabeledEffect<L, R> {}
 
-  const ask = () => E.perform(new Ask());
+  const ask = () => Eff.perform(new Ask());
 
-  function run<E1 extends E.Effect, T>(env: E, comp: E.Effectful<E1, T>) {
-    return E.tryWith<E1, Ask, T>(comp, {
+  function run<E extends Eff.Effect, T>(env: R, comp: Eff.Effectful<E, T>) {
+    return Eff.tryWith<E, Ask, T>(comp, {
       effc(when) {
         when(Ask, (_, k) => k.continue(env));
       },

@@ -1,23 +1,23 @@
-import * as E from "./effect.ts";
+import * as Eff from "./effect.ts";
 
 export function State<L extends string extends L ? never : string, S>() {
-  class Get extends E.LabeledEffect<L, S> {}
-  class Put extends E.LabeledEffect<L, void> {
+  class Get extends Eff.LabeledEffect<L, S> {}
+  class Put extends Eff.LabeledEffect<L, void> {
     constructor(public state: S) {
       super();
     }
   }
 
-  const get = () => E.perform(new Get());
-  const put = (state: S) => E.perform(new Put(state));
+  const get = () => Eff.perform(new Get());
+  const put = (state: S) => Eff.perform(new Put(state));
 
-  function* modify(f: (s: S) => S): E.Effectful<Get | Put, void> {
+  function* modify(f: (s: S) => S): Eff.Effectful<Get | Put, void> {
     yield* put(f(yield* get()));
   }
 
-  function run<E1 extends E.Effect, T>(init: S, comp: E.Effectful<E1, T>) {
+  function run<E extends Eff.Effect, T>(init: S, comp: Eff.Effectful<E, T>) {
     let state: S = init;
-    return E.tryWith<E1, Get | Put, T>(comp, {
+    return Eff.tryWith<E, Get | Put, T>(comp, {
       effc(when) {
         when(Get, (_eff, k) => k.continue(state));
         when(Put, (eff, k) => {
