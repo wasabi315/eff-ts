@@ -1,5 +1,5 @@
 export class Effect<T = unknown> {
-  #T!: T;
+  #_T!: T;
 
   toString() {
     return this.constructor.name;
@@ -10,12 +10,12 @@ export class LabeledEffect<
   L extends string extends L ? never : string,
   T = unknown
 > extends Effect<T> {
-  #L!: L;
+  #_L!: L;
 }
 
-export type UnEffect<E extends Effect> = E extends Effect<infer T> ? T : never;
+type UnEffect<E extends Effect> = E extends Effect<infer T> ? T : never;
 
-export type EffectConstructor<E extends Effect> = {
+type EffectConstructor<E extends Effect> = {
   // deno-lint-ignore no-explicit-any
   new (...args: any[]): E;
 };
