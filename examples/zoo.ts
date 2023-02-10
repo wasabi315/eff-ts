@@ -3,9 +3,9 @@ import {
   State,
   Reader,
   Exception as Exn,
-  Flip as F,
-  Defer as D,
 } from "../src/effect.ts";
+import * as F from "./flip.ts";
+import * as D from "./defer.ts";
 
 const S1 = State<"S1", string>();
 const S2 = State<"S2", number>();
@@ -32,6 +32,6 @@ function* main() {
 
 console.log(
   Eff.run(
-    D.run(F.runRandom(Exn.run(R1.run(10, S1.run("Hello", S2.run(0, main()))))))
+    D.run(F._50_50(Exn.run(R1.run(10, S1.run("Hello", S2.run(0, main()))))))
   )
 );
