@@ -7,10 +7,8 @@ export { type Flip };
 export const flip = () => E.perform(new Flip());
 
 function createRunner(f: () => boolean) {
-  return <E1 extends E.Effect, T>(
-    comp: E.Effectful<E1, T>
-  ): E.Effectful<Exclude<E1, Flip>, T> => {
-    return E.tryWith(comp, {
+  return <E1 extends E.Effect, T>(comp: E.Effectful<E1, T>) => {
+    return E.tryWith<E1, Flip, T>(comp, {
       effc(when) {
         when(Flip, (_eff, k) => k.continue(f()));
       },

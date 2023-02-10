@@ -26,15 +26,22 @@ export type Continuation<E extends Effect, T, S> = {
   continue(arg: T): Effectful<E, S>;
 };
 
-type RegisterEffectHandler<E2 extends Effect, S> = <E extends Effect>(
+type EffectHandler<E extends Effect, E1 extends Effect, S> = (
+  eff: E,
+  k: Continuation<E1, UnEffect<E>, S>
+) => Effectful<E1, S>;
+
+type RegisterEffectHandler<E1 extends Effect, E2 extends Effect, S> = <
+  E extends E2
+>(
   eff: EffectConstructor<E>,
-  handle: (eff: E, k: Continuation<E2, UnEffect<E>, S>) => Effectful<E2, S>
+  handle: EffectHandler<E, Exclude<E1, E2>, S>
 ) => void;
 
 export type Handler<E1 extends Effect, E2 extends Effect, T, S> = {
   retc(x: T): S;
   errc(err: unknown): S;
-  effc(when: RegisterEffectHandler<E2, S>): void;
+  effc(when: RegisterEffectHandler<E1, E2, S>): void;
 };
 
 export function pure(): Effectful<never, void>;
@@ -61,21 +68,22 @@ export function run<T>(comp: Effectful<never, T>): T {
 export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
   comp: Effectful<E1, T>,
   handlers: Handler<E1, E2, T, S>
-): Effectful<E2, S> {
+): Effectful<Exclude<E1, E2>, S> {
+  type E3 = Exclude<E1, E2>;
+
   const effc = (
     eff: E1
-  ): ((k: Continuation<E2, unknown, S>) => Effectful<E2, S>) | null => {
-    let handler = null;
-    const match: RegisterEffectHandler<E2, S> = (ctor, h) => {
+  ): ((k: Continuation<E3, unknown, S>) => Effectful<E3, S>) | null => {
+    let matched = null;
+    handlers.effc((ctor, handler) => {
       if (eff instanceof ctor) {
-        handler = (k: Continuation<E2, unknown, S>) => h(eff, k);
+        matched = (k: Continuation<E3, unknown, S>) => handler(eff, k);
       }
-    };
-    handlers.effc(match);
-    return handler;
+    });
+    return matched;
   };
 
-  function* attachHandlers(comp: Effectful<E1, T>): Effectful<E2, S> {
+  function* attachHandlers(comp: Effectful<E1, T>): Effectful<E3, S> {
     let prev = null;
 
     while (true) {
@@ -92,7 +100,7 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
 
       const handler = effc(res.value);
       if (handler === null) {
-        prev = yield res.value as unknown as E2;
+        prev = yield res.value as unknown as E3;
         continue;
       }
 
@@ -100,7 +108,7 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
     }
   }
 
-  function createCont(comp: Effectful<E1, T>): Continuation<E2, unknown, S> {
+  function createCont(comp: Effectful<E1, T>): Continuation<E3, unknown, S> {
     let resumed = false;
     return {
       continue(...x) {
@@ -119,7 +127,7 @@ export function matchWith<E1 extends Effect, E2 extends Effect, T, S>(
 export const tryWith = <E1 extends Effect, E2 extends Effect, T>(
   comp: Effectful<E1, T>,
   handlers: Pick<Handler<E1, E2, T, T>, "effc">
-): Effectful<E2, T> =>
+): Effectful<Exclude<E1, E2>, T> =>
   matchWith<E1, E2, T, T>(comp, {
     retc(x) {
       return x;
@@ -132,9 +140,9 @@ export const tryWith = <E1 extends Effect, E2 extends Effect, T>(
 
 function* _continue<E extends Effect, T>(
   k: Effectful<E, T>,
-  ...x: [] | [unknown]
+  x?: unknown
 ): Effectful<E, T> {
-  let prev = x[0];
+  let prev = x;
   while (true) {
     const { value, done } = k.next(prev);
     if (done) {

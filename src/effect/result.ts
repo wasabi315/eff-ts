@@ -13,10 +13,8 @@ export const err = (error: unknown) => E.perform(new Err(error));
 
 export type Result<T, E> = { ok: true; value: T } | { ok: false; error: E };
 
-export function run<E1 extends E.Effect, T>(
-  comp: E.Effectful<E1, T>
-): E.Effectful<Exclude<E1, Err>, Result<T, unknown>> {
-  return E.matchWith(comp, {
+export function run<E1 extends E.Effect, T>(comp: E.Effectful<E1, T>) {
+  return E.matchWith<E1, Err, T, Result<T, unknown>>(comp, {
     retc(value) {
       return { ok: true, value };
     },

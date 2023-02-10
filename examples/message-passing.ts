@@ -12,10 +12,8 @@ type Status<E1 extends E.Effect> =
   | { done: true }
   | { done: false; msg: string; cont: E.Continuation<E1, string, Status<E1>> };
 
-function step<E1 extends E.Effect>(
-  task: E.Effectful<E1, void>
-): E.Effectful<Exclude<E1, Exchange>, Status<Exclude<E1, Exchange>>> {
-  return E.matchWith(task, {
+function step<E1 extends E.Effect>(task: E.Effectful<E1, void>) {
+  return E.matchWith<E1, Exchange, void, Status<Exclude<E1, Exchange>>>(task, {
     retc() {
       return { done: true };
     },

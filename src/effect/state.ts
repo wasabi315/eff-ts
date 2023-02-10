@@ -15,12 +15,9 @@ export function State<L extends string extends L ? never : string, S>() {
     yield* put(f(yield* get()));
   }
 
-  function run<E1 extends E.Effect, T>(
-    init: S,
-    comp: E.Effectful<E1, T>
-  ): E.Effectful<Exclude<E1, Get | Put>, T> {
+  function run<E1 extends E.Effect, T>(init: S, comp: E.Effectful<E1, T>) {
     let state: S = init;
-    return E.tryWith<E1, Exclude<E1, Get | Put>, T>(comp, {
+    return E.tryWith<E1, Get | Put, T>(comp, {
       effc(when) {
         when(Get, (_eff, k) => k.continue(state));
         when(Put, (eff, k) => {

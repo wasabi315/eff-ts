@@ -5,11 +5,8 @@ export function Reader<L extends string extends L ? never : string, E>() {
 
   const ask = () => E.perform(new Ask());
 
-  function run<E1 extends E.Effect, T>(
-    env: E,
-    comp: E.Effectful<E1, T>
-  ): E.Effectful<Exclude<E1, Ask>, T> {
-    return E.tryWith(comp, {
+  function run<E1 extends E.Effect, T>(env: E, comp: E.Effectful<E1, T>) {
+    return E.tryWith<E1, Ask, T>(comp, {
       effc(when) {
         when(Ask, (_, k) => k.continue(env));
       },
