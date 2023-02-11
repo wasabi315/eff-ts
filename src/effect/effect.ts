@@ -146,10 +146,15 @@ function _continue<E extends Effect, T>(
   k: Effectful<E, T>,
   x: unknown
 ): Effectful<E, T> {
-  const next = k.next.bind(k);
-  k.next = () => {
-    k.next = next;
-    return next(x);
+  return {
+    [Symbol.iterator]() {
+      return this;
+    },
+    next() {
+      this.next = k.next.bind(k);
+      return k.next(x);
+    },
+    return: k.return.bind(k),
+    throw: k.throw.bind(k),
   };
-  return k;
 }
