@@ -1,6 +1,11 @@
 import * as Eff from "./effect.ts";
 
-class Await<T> extends Eff.Effect<T> {
+/**
+ * An effect that waits for a `Promise` fulfilled.
+ * Enables us to write asynchronous computations without the built-in async-await construct.
+ * @typeParam T The type of a value to be returned by the `Promise`.
+ */
+class Await<T = unknown> extends Eff.Effect<T> {
   constructor(public promise: Promise<T>) {
     super();
   }
@@ -8,12 +13,17 @@ class Await<T> extends Eff.Effect<T> {
 
 export { type Await };
 
+/** Awaits a `Promise` to be fulfilled. */
 export const _await = <T>(promise: Promise<T>) =>
   Eff.perform(new Await(promise));
 
-export function run<T>(comp: Eff.Effectful<Await<unknown>, T>) {
-  return new Promise((resolve, reject) => {
-    const x = Eff.matchWith<Await<unknown>, Await<unknown>, T, void>(comp, {
+/**
+ * Runs an asynchronous computation.
+ * Note that this runner can only be outermost.
+ */
+export function run<T>(comp: Eff.Effectful<Await, T>) {
+  return new Promise<T>((resolve, reject) => {
+    const x = Eff.matchWith<Await, Await, T, void>(comp, {
       retc: resolve,
       errc: reject,
       effc(when) {

@@ -1,4 +1,9 @@
+/**
+ * The base class for all effects. Extend this class to create a new effect.
+ * @typeParam T The type of a value to be returned when performing.
+ */
 export class Effect<T = unknown> {
+  // For making `EffReturnType` work correctly.
   #_T!: T;
 
   toString() {
@@ -6,10 +11,17 @@ export class Effect<T = unknown> {
   }
 }
 
+/**
+ * A subclass of `Effect` that has a label.
+ * The label is for distinguishing the same kinds of effects such as multiple `State` effects with the same type of state.
+ * @typeParam L A label as a string literal type.
+ * @typeParam T The type of a value to be returned when performing.
+ */
 export class LabeledEffect<
   L extends string extends L ? never : string,
   T = unknown
 > extends Effect<T> {
+  // For making `Exclude` work correctly.
   #_L!: L;
 }
 
@@ -20,8 +32,14 @@ type EffConstructor<E extends Effect> = {
   new (...args: any[]): E;
 };
 
+/**
+ * `Effectful<E, T>` is an effectful computation that eventually returns a `T` value performing `E` effects along the way.
+ */
 export type Effectful<E extends Effect, T> = Generator<E, T>;
 
+/**
+ * `Continuation<T, E, S>` is a continuation that expects a `T` value and eventually returns an `S` value performing `E` effects along the way.
+ */
 export type Continuation<T, E extends Effect, S> = {
   continue(arg: T): Effectful<E, S>;
 };
@@ -38,25 +56,38 @@ type SetEffHandler<E extends Effect, EHandle extends Effect, S> = <
   handle: EffHandler<E1, Exclude<E, EHandle>, S>
 ) => void;
 
+/** `Handlers<E, EHandle, T, S>` is an object with three properties. */
 export type Handlers<E extends Effect, EHandle extends Effect, T, S> = {
+  /** Processes the return value of a computation enclosed by this handler. */
   retc(x: T): S;
+  /** Handles exceptions. */
   errc(err: unknown): S;
+  /** Handles effects performed by a computation enclosed by this handler. */
   effc(when: SetEffHandler<E, EHandle, S>): void;
 };
 
+export type EffectHandlers<E extends Effect, EHandle extends Effect, T> = Pick<
+  Handlers<E, EHandle, T, T>,
+  "effc"
+>;
+
+/** A do-nothing `Effectful` computation. */
 export function pure(): Effectful<never, void>;
+/** Lift a value to an `Effectful` computation.  */
 export function pure<T>(x: T): Effectful<never, T>;
 // deno-lint-ignore require-yield
 export function* pure<T>(x?: T): Effectful<never, void | T> {
   return x;
 }
 
+/** Performs an effect. */
 export function* perform<E extends Effect<unknown>>(
   eff: E
 ): Effectful<E, EffReturnType<E>> {
   return (yield eff) as EffReturnType<E>;
 }
 
+/** Runs a pure `Effectful` computation. */
 export function run<T>(comp: Effectful<never, T>): T {
   const { value, done } = comp.next();
   if (!done) {
@@ -65,6 +96,11 @@ export function run<T>(comp: Effectful<never, T>): T {
   return value;
 }
 
+/**
+ * Runs an `Effectful` computation under a `Handlers`.
+ * @param comp A computation to run.
+ * @param handlers A `Handlers` that handle effects performed by `comp`.
+ */
 export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
   comp: Effectful<E, T>,
   handlers: Handlers<E, EHandle, T, S>
@@ -79,7 +115,7 @@ export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
     let matched = null;
     handlers.effc((ctor, handler) => {
       if (eff instanceof ctor) {
-        matched = (k: Continuation<unknown, EHandled, S>) => handler(eff, k);
+        matched = handler.bind(null, eff);
       }
     });
     return matched;
@@ -128,11 +164,16 @@ export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
   return attachHandlers(comp);
 }
 
-export const tryWith = <E extends Effect, EHandle extends Effect, T>(
+/**
+ * Runs an `Effectful` computation under an `EffectHandlers`.
+ * @param comp A computation to run.
+ * @param handlers An `EffectHandlers` that handle effects performed by `comp`.
+ */
+export function tryWith<E extends Effect, EHandle extends Effect, T>(
   comp: Effectful<E, T>,
-  handlers: Pick<Handlers<E, EHandle, T, T>, "effc">
-): Effectful<Exclude<E, EHandle>, T> =>
-  matchWith<E, EHandle, T, T>(comp, {
+  handlers: EffectHandlers<E, EHandle, T>
+): Effectful<Exclude<E, EHandle>, T> {
+  return matchWith<E, EHandle, T, T>(comp, {
     retc(x) {
       return x;
     },
@@ -141,6 +182,7 @@ export const tryWith = <E extends Effect, EHandle extends Effect, T>(
     },
     effc: handlers.effc,
   });
+}
 
 function _continue<E extends Effect, T>(
   k: Effectful<E, T>,
