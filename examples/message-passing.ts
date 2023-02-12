@@ -1,4 +1,4 @@
-import { Effect as Eff } from "../src/effect.ts";
+import { Effect as Eff } from "../src/mod.ts";
 
 class Exchange extends Eff.Effect<string> {
   constructor(public msg: string) {

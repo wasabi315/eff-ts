@@ -1,4 +1,4 @@
-import * as Eff from "./effect.ts";
+import * as Eff from "../effect.ts";
 
 /**
  * The State effect.

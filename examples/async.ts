@@ -1,4 +1,4 @@
-import { Effect as Eff, Async as A } from "../src/effect.ts";
+import { Effect as Eff, Async as A } from "../src/mod.ts";
 import * as D from "./defer.ts";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));

@@ -1,4 +1,4 @@
-import * as Eff from "./effect.ts";
+import * as Eff from "../effect.ts";
 
 /**
  * An effect that waits for a `Promise` fulfilled.
@@ -23,7 +23,7 @@ export const _await = <T>(promise: Promise<T>) =>
  */
 export function run<T>(comp: Eff.Effectful<Await, T>) {
   return new Promise<T>((resolve, reject) => {
-    const x = Eff.matchWith<Await, Await, T, void>(comp, {
+    const x = Eff.matchWith(comp, {
       retc: resolve,
       errc: reject,
       effc(when) {

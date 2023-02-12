@@ -1,9 +1,4 @@
-import {
-  Effect as Eff,
-  State,
-  Reader,
-  Exception as Exn,
-} from "../src/effect.ts";
+import { Effect as Eff, State, Reader, Exception as Exn } from "../src/mod.ts";
 import * as F from "./flip.ts";
 import * as D from "./defer.ts";
 
