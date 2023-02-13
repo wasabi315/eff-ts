@@ -3,7 +3,7 @@
 An effect handler implementation with JavaScript/TypeScript Generators.
 This is for my educational purpose.
 
-## What is this?
+## Features
 
 - Provides mostly the same API as OCaml's [deep handlers](https://v2.ocaml.org/api/Effect.Deep.html).
 - Fully typed.
@@ -17,9 +17,9 @@ deno run examples/defer.ts
 
 See the [examples](https://github.com/wasabi315/eff-ts/tree/main/examples) directory for more examples.
 
-## How to define custom effects
+## How to define and use effects
 
-The following code defines a custom effect that behaves like Golang's defer construct.
+The following code defines an effect that behaves like Golang's defer construct.
 
 ```typescript
 // 1. Define `Defer` effect by extending `Effect`.
