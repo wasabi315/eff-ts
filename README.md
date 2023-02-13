@@ -9,6 +9,14 @@ This is for my educational purpose.
 - Fully typed.
 - Aims to be effect-safe. See the [effect-safe](https://github.com/wasabi315/eff-ts/tree/effect-safe) branch for in-progress implementation.
 
+## Try it!
+
+```sh
+deno run examples/defer.ts
+```
+
+See the [examples](https://github.com/wasabi315/eff-ts/tree/main/examples) directory for more examples.
+
 ## How to define custom effects
 
 The following code defines a custom effect that behaves like Golang's defer construct.
