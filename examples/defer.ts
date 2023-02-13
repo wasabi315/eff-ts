@@ -19,9 +19,9 @@ function run<T>(comp: Eff.Effectful<T>) {
       thunks.forEach((thunk) => thunk());
       return x;
     },
-    errc(err) {
+    exnc(exn) {
       thunks.forEach((thunk) => thunk());
-      throw err;
+      throw exn;
     },
     effc(when) {
       when(Defer, (eff, k) => {

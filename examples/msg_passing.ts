@@ -21,8 +21,8 @@ function step(task: Eff.Effectful<void>) {
     retc(): Status {
       return { done: true };
     },
-    errc(err) {
-      throw err;
+    exnc(exn) {
+      throw exn;
     },
     effc(when) {
       when(Xchg, (eff, k) => {

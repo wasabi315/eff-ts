@@ -45,7 +45,7 @@ export type Handlers<T, S> = {
   /** Processes the return value of a computation enclosed by this handler. */
   retc(x: T): S;
   /** Handles exceptions. */
-  errc(err: unknown): S;
+  exnc(err: unknown): S;
   /** Handles effects performed by a computation enclosed by this handler. */
   effc(when: SetEffHandler<S>): void;
 };
@@ -106,7 +106,7 @@ export function matchWith<T, S>(
       try {
         res = comp.next(prev);
       } catch (err) {
-        return handlers.errc(err);
+        return handlers.exnc(err);
       }
 
       if (res.done) {
@@ -152,7 +152,7 @@ export function tryWith<T>(
     retc(x) {
       return x;
     },
-    errc(err) {
+    exnc(err) {
       throw err;
     },
     effc: handlers.effc,

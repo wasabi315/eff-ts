@@ -24,8 +24,8 @@ export function run<T>(comp: Eff.Effectful<T>) {
     retc(value) {
       return { ok: true, value };
     },
-    errc(error) {
-      return { ok: false, error };
+    exnc(exn) {
+      return { ok: false, error: exn };
     },
     effc(when) {
       when(Raise, (eff, _k) => Eff.pure({ ok: false, error: eff.error }));

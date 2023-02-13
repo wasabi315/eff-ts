@@ -45,11 +45,11 @@ function runDefer<T>(comp: Eff.Effectful<E, T>) {
       return x;
     },
 
-    // Error handler: what you want to do when `comp` throws an exception `err`.
-    errc(err) {
+    // Exception handler: what you want to do when `comp` throws an exception `exn`.
+    exnc(exn) {
       // Execute thunks then rethrow `err`.
       thunks.forEach((thunk) => thunk());
-      throw err;
+      throw exn;
     },
 
     // Effect handler: what you want to do when `comp` performs effects.
