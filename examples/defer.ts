@@ -10,9 +10,9 @@ export { type Defer };
 
 export const defer = (thunk: () => void) => Eff.perform(new Defer(thunk));
 
-export function run<E extends Eff.Effect, T>(comp: Eff.Effectful<E, T>) {
+export function run<T>(comp: Eff.Effectful<T>) {
   const thunks: (() => void)[] = [];
-  return Eff.matchWith<E, Defer, T, T>(comp, {
+  return Eff.matchWith(comp, {
     retc(x) {
       thunks.forEach((thunk) => thunk());
       return x;
@@ -30,7 +30,7 @@ export function run<E extends Eff.Effect, T>(comp: Eff.Effectful<E, T>) {
   });
 }
 
-function* main(): Eff.Effectful<Defer, void> {
+function* main(): Eff.Effectful<void> {
   console.log("counting");
   for (let i = 0; i < 10; i++) {
     yield* defer(() => console.log(i));

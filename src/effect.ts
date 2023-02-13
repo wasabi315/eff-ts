@@ -33,62 +33,57 @@ type EffConstructor<E extends Effect> = {
 };
 
 /**
- * `Effectful<E, T>` is an effectful computation that eventually returns a `T` value performing `E` effects along the way.
+ * `Effectful<T>` is an effectful computation that eventually returns a `T` value performing effects along the way.
  */
-export type Effectful<E extends Effect, T> = Generator<E, T>;
+export type Effectful<T> = Generator<Effect, T>;
 
 /**
- * `Continuation<T, E, S>` is a continuation that expects a `T` value and eventually returns an `S` value performing `E` effects along the way.
+ * `Continuation<T, S>` is a continuation that expects a `T` value and eventually returns an `S` value performing effects along the way.
  */
-export type Continuation<T, E extends Effect, S> = {
-  continue(arg: T): Effectful<E, S>;
+export type Continuation<T, S> = {
+  continue(arg: T): Effectful<S>;
 };
 
-type EffHandler<E extends Effect, EHandled extends Effect, S> = (
+type EffHandler<E extends Effect, S> = (
   eff: E,
-  k: Continuation<EffReturnType<E>, EHandled, S>
-) => Effectful<EHandled, S>;
+  k: Continuation<EffReturnType<E>, S>
+) => Effectful<S>;
 
-type SetEffHandler<E extends Effect, EHandle extends Effect, S> = <
-  E1 extends EHandle
->(
-  eff: EffConstructor<E1>,
-  handle: EffHandler<E1, Exclude<E, EHandle>, S>
+type SetEffHandler<S> = <E extends Effect>(
+  eff: EffConstructor<E>,
+  handle: EffHandler<E, S>
 ) => void;
 
-/** `Handlers<E, EHandle, T, S>` is an object with three properties. */
-export type Handlers<E extends Effect, EHandle extends Effect, T, S> = {
+/** `Handlers<T, S>` is an object with three properties. */
+export type Handlers<T, S> = {
   /** Processes the return value of a computation enclosed by this handler. */
   retc(x: T): S;
   /** Handles exceptions. */
   errc(err: unknown): S;
   /** Handles effects performed by a computation enclosed by this handler. */
-  effc(when: SetEffHandler<E, EHandle, S>): void;
+  effc(when: SetEffHandler<S>): void;
 };
 
-export type EffectHandlers<E extends Effect, EHandle extends Effect, T> = Pick<
-  Handlers<E, EHandle, T, T>,
-  "effc"
->;
+export type EffectHandlers<T> = Pick<Handlers<T, T>, "effc">;
 
 /** A do-nothing `Effectful` computation. */
-export function pure(): Effectful<never, void>;
+export function pure(): Effectful<void>;
 /** Lift a value to an `Effectful` computation.  */
-export function pure<T>(x: T): Effectful<never, T>;
+export function pure<T>(x: T): Effectful<T>;
 // deno-lint-ignore require-yield
-export function* pure<T>(x?: T): Effectful<never, void | T> {
+export function* pure<T>(x?: T): Effectful<void | T> {
   return x;
 }
 
 /** Performs an effect. */
 export function* perform<E extends Effect<unknown>>(
   eff: E
-): Effectful<E, EffReturnType<E>> {
+): Effectful<EffReturnType<E>> {
   return (yield eff) as EffReturnType<E>;
 }
 
-/** Runs a pure `Effectful` computation. */
-export function run<T>(comp: Effectful<never, T>): T {
+/** Runs an effectful computation. */
+export function run<T>(comp: Effectful<T>): T {
   const { value, done } = comp.next();
   if (!done) {
     throw new Error(`Unhandled Effect: ${value}`);
@@ -101,17 +96,13 @@ export function run<T>(comp: Effectful<never, T>): T {
  * @param comp A computation to run.
  * @param handlers A `Handlers` that handle effects performed by `comp`.
  */
-export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
-  comp: Effectful<E, T>,
-  handlers: Handlers<E, EHandle, T, S>
-): Effectful<Exclude<E, EHandle>, S> {
-  type EHandled = Exclude<E, EHandle>;
-
+export function matchWith<T, S>(
+  comp: Effectful<T>,
+  handlers: Handlers<T, S>
+): Effectful<S> {
   const effc = (
-    eff: E
-  ):
-    | ((k: Continuation<unknown, EHandled, S>) => Effectful<EHandled, S>)
-    | null => {
+    eff: Effect
+  ): ((k: Continuation<unknown, S>) => Effectful<S>) | null => {
     let matched = null;
     handlers.effc((ctor, handler) => {
       if (eff instanceof ctor) {
@@ -121,7 +112,7 @@ export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
     return matched;
   };
 
-  function* attachHandlers(comp: Effectful<E, T>): Effectful<EHandled, S> {
+  function* attachHandlers(comp: Effectful<T>): Effectful<S> {
     let prev = null;
 
     while (true) {
@@ -138,7 +129,7 @@ export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
 
       const handler = effc(res.value);
       if (handler === null) {
-        prev = yield res.value as unknown as EHandled;
+        prev = yield res.value;
         continue;
       }
 
@@ -146,9 +137,7 @@ export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
     }
   }
 
-  function createCont(
-    comp: Effectful<E, T>
-  ): Continuation<unknown, EHandled, S> {
+  function createCont(comp: Effectful<T>): Continuation<unknown, S> {
     let resumed = false;
     return {
       continue(x) {
@@ -169,11 +158,11 @@ export function matchWith<E extends Effect, EHandle extends Effect, T, S>(
  * @param comp A computation to run.
  * @param handlers An `EffectHandlers` that handle effects performed by `comp`.
  */
-export function tryWith<E extends Effect, EHandle extends Effect, T>(
-  comp: Effectful<E, T>,
-  handlers: EffectHandlers<E, EHandle, T>
-): Effectful<Exclude<E, EHandle>, T> {
-  return matchWith<E, EHandle, T, T>(comp, {
+export function tryWith<T>(
+  comp: Effectful<T>,
+  handlers: EffectHandlers<T>
+): Effectful<T> {
+  return matchWith<T, T>(comp, {
     retc(x) {
       return x;
     },
@@ -184,10 +173,7 @@ export function tryWith<E extends Effect, EHandle extends Effect, T>(
   });
 }
 
-function _continue<E extends Effect, T>(
-  k: Effectful<E, T>,
-  x: unknown
-): Effectful<E, T> {
+function _continue<T>(k: Effectful<T>, x: unknown): Effectful<T> {
   return {
     [Symbol.iterator]() {
       return this;

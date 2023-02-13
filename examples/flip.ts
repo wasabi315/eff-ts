@@ -7,8 +7,8 @@ export { type Flip };
 export const flip = () => Eff.perform(new Flip());
 
 export function createRunner(p: number) {
-  return function run<E extends Eff.Effect, T>(comp: Eff.Effectful<E, T>) {
-    return Eff.tryWith<E, Flip, T>(comp, {
+  return function run<T>(comp: Eff.Effectful<T>) {
+    return Eff.tryWith(comp, {
       effc(when) {
         when(Flip, (_eff, k) => k.continue(Math.random() < p));
       },

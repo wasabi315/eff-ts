@@ -13,8 +13,8 @@ export function Reader<L extends string extends L ? never : string, R>() {
   const ask = () => Eff.perform(new Ask());
 
   /** Runs a computation under a given environment of value. */
-  function run<E extends Eff.Effect, T>(env: R, comp: Eff.Effectful<E, T>) {
-    return Eff.tryWith<E, Ask, T>(comp, {
+  function run<T>(env: R, comp: Eff.Effectful<T>) {
+    return Eff.tryWith(comp, {
       effc(when) {
         when(Ask, (_, k) => k.continue(env));
       },
