@@ -19,7 +19,7 @@ export const _await = <T>(promise: Promise<T>) =>
 
 /**
  * Runs an asynchronous computation.
- * Note that this runner can only be outermost, as not returning an Effectful but Promise.
+ * Note that this runner can only be outermost or an exception will be thrown.
  */
 export function run<T>(comp: Eff.Effectful<T>) {
   return new Promise<T>((resolve, reject) => {

@@ -1,32 +1,33 @@
-import { Effect as Eff, State, Reader, Exception as Exn } from "../src/mod.ts";
-import * as F from "./flip.ts";
-import * as D from "./defer.ts";
+import { Async as A, Exception as E, State, Reader } from "../src/mod.ts";
 
-const S1 = State<string>();
-const S2 = State<number>();
-const R1 = Reader<number>();
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+const S1 = State<number>();
+const S2 = State<string>();
+const R = Reader<number>();
 
 function* main() {
-  yield* D.defer(() => console.log("defer 1"));
+  // You can have multiple different states.
   console.log(yield* S1.get(), yield* S2.get());
-  yield* S1.modify((str) => str + ", world!");
+
+  const m = yield* R.ask();
+  yield* S1.put(m);
   console.log(yield* S1.get(), yield* S2.get());
-  if (yield* F.flip()) {
-    yield* Exn.raise("error");
+
+  // Note that the built-in async-await construct is not used here!
+  yield* A._await(sleep(1000));
+
+  yield* S2.modify((str) => str + ", world!");
+  console.log(yield* S1.get(), yield* S2.get());
+
+  if ((yield* S1.get()) === 100) {
+    yield* E.raise("S1's state is 100");
   }
-  yield* D.defer(() => console.log("defer 2"));
+
+  // Will not be executed.
   console.log(yield* S1.get(), yield* S2.get());
-  yield* S2.put(yield* R1.ask());
-  console.log(yield* S1.get(), yield* S2.get());
-  if (yield* F.flip()) {
-    yield* Exn.raise("error");
-  }
-  console.log(yield* S1.get(), yield* S2.get());
-  return yield* R1.ask();
 }
 
-console.log(
-  Eff.run(
-    D.run(F._50_50(Exn.run(R1.run(10, S1.run("Hello", S2.run(0, main()))))))
-  )
+A.run(E.run(R.run(100, S1.run(0, S2.run("Hello", main()))))).then((res) =>
+  console.log(res)
 );

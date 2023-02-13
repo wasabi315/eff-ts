@@ -1,31 +1,31 @@
+// Translated from https://github.com/ocaml-multicore/ocaml-effects-tutorial/blob/master/sources/msg_passing.ml .
+
 import { Effect as Eff } from "../src/mod.ts";
 
-class Exchange extends Eff.Effect<string> {
-  constructor(public msg: string) {
+class Xchg extends Eff.Effect<number> {
+  constructor(public msg: number) {
     super();
   }
 }
-
-const exchange = (msg: string) => Eff.perform(new Exchange(msg));
 
 type Status =
   | { done: true }
   | {
       done: false;
-      msg: string;
-      cont: Eff.Continuation<string, Status>;
+      msg: number;
+      cont: Eff.Continuation<number, Status>;
     };
 
 function step(task: Eff.Effectful<void>) {
-  return Eff.matchWith<void, Status>(task, {
-    retc() {
+  return Eff.matchWith(task, {
+    retc(): Status {
       return { done: true };
     },
     errc(err) {
       throw err;
     },
     effc(when) {
-      when(Exchange, (eff, k) => {
+      when(Xchg, (eff, k) => {
         return Eff.pure({ done: false, msg: eff.msg, cont: k });
       });
     },
@@ -49,19 +49,16 @@ function* runBoth(
   throw new Error("Improper synchronization");
 }
 
-function* task(name: string, msg: string): Eff.Effectful<void> {
-  if (msg.length === 0) {
-    console.log(`${name}: exiting`);
+function* task(name: string, n: number): Eff.Effectful<void> {
+  if (n === 0) {
     return;
   }
 
-  console.log(`${name}: sending   ${msg}`);
-  msg = yield* exchange(msg);
-  console.log(`${name}: received  ${msg}`);
+  console.log(`${name}: sending ${n}!`);
+  const v = yield* Eff.perform(new Xchg(n));
+  console.log(`${name}: received ${v}!`);
 
-  yield* task(name, msg.slice(0, -1));
+  yield* task(name, n - 1);
 }
 
-const task1 = task("A", "Effect");
-const task2 = task("B", "Handle");
-Eff.run(runBoth(step(task1), step(task2)));
+Eff.run(runBoth(step(task("a", 3)), step(task("b", 3))));

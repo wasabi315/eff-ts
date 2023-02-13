@@ -2,7 +2,7 @@ import * as Eff from "../effect.ts";
 
 /**
  * An effect that raises an exception.
- * Execution of the remaining computation will stop and control will be passed to the closest `run`.
+ * Execution of the remaining computation will stop and control will be passed to the closest handler of this effect.
  */
 // deno-lint-ignore no-explicit-any
 class Raise extends Eff.Effect<any> {

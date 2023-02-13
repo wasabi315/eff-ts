@@ -2,23 +2,15 @@ import { Effect as Eff } from "../src/mod.ts";
 
 class Flip extends Eff.Effect<boolean> {}
 
-export { type Flip };
+const flip = () => Eff.perform(new Flip());
 
-export const flip = () => Eff.perform(new Flip());
-
-export function createRunner(p: number) {
-  return function run<T>(comp: Eff.Effectful<T>) {
-    return Eff.tryWith(comp, {
-      effc(when) {
-        when(Flip, (_eff, k) => k.continue(Math.random() < p));
-      },
-    });
-  };
+function run<T>(prob: number, comp: Eff.Effectful<T>) {
+  return Eff.tryWith(comp, {
+    effc(when) {
+      when(Flip, (_eff, k) => k.continue(Math.random() < prob));
+    },
+  });
 }
-
-export const _50_50 = createRunner(0.5);
-export const alwaysTrue = createRunner(1);
-export const alwaysFalse = createRunner(0);
 
 function* main() {
   for (let i = 0; i < 5; i++) {
@@ -28,12 +20,10 @@ function* main() {
   }
 }
 
-if (import.meta.main) {
-  console.log("------------");
-  Eff.run(alwaysFalse(main()));
-  console.log("------------");
-  Eff.run(_50_50(main()));
-  console.log("------------");
-  Eff.run(alwaysTrue(main()));
-  console.log("------------");
-}
+console.log("------------");
+Eff.run(run(0, main()));
+console.log("------------");
+Eff.run(run(0.5, main()));
+console.log("------------");
+Eff.run(run(1, main()));
+console.log("------------");
