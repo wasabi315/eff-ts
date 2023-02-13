@@ -11,20 +11,6 @@ export class Effect<T = unknown> {
   }
 }
 
-/**
- * A subclass of `Effect` that has a label.
- * The label is for distinguishing the same kinds of effects such as multiple `State` effects with the same type of state.
- * @typeParam L A label as a string literal type.
- * @typeParam T The type of a value to be returned when performing.
- */
-export class LabeledEffect<
-  L extends string extends L ? never : string,
-  T = unknown
-> extends Effect<T> {
-  // For making `Exclude` work correctly.
-  #_L!: L;
-}
-
 type EffReturnType<E extends Effect> = E extends Effect<infer T> ? T : never;
 
 type EffConstructor<E extends Effect> = {

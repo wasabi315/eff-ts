@@ -2,12 +2,11 @@ import * as Eff from "../effect.ts";
 
 /**
  * The Reader effect.
- * The type parameter `L` is a label for distinguishing multiple Reader effects.
- * @typeParam L A label as a string literal type.
+ * Each call of this function returns operations on distinct Reader effects so you can mix multiple Readers.
  * @typeParam R The type of a value read by computations as a shared environment.
  */
-export function Reader<L extends string extends L ? never : string, R>() {
-  class Ask extends Eff.LabeledEffect<L, R> {}
+export function Reader<R>() {
+  class Ask extends Eff.Effect<R> {}
 
   /** Reads a value from a shared environment. */
   const ask = () => Eff.perform(new Ask());

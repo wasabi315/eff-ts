@@ -2,13 +2,12 @@ import * as Eff from "../effect.ts";
 
 /**
  * The State effect.
- * The type parameter `L` is a label for distinguishing multiple State effects.
- * @typeParam L A label as a string literal type.
+ * Each call of this function returns operations on distinct State effects so you can mix multiple States.
  * @typeParam S The type of the state.
  */
-export function State<L extends string extends L ? never : string, S>() {
-  class Get extends Eff.LabeledEffect<L, S> {}
-  class Put extends Eff.LabeledEffect<L, void> {
+export function State<S>() {
+  class Get extends Eff.Effect<S> {}
+  class Put extends Eff.Effect<void> {
     constructor(public state: S) {
       super();
     }

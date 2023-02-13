@@ -2,9 +2,9 @@ import { Effect as Eff, State, Reader, Exception as Exn } from "../src/mod.ts";
 import * as F from "./flip.ts";
 import * as D from "./defer.ts";
 
-const S1 = State<"S1", string>();
-const S2 = State<"S2", number>();
-const R1 = Reader<"R1", number>();
+const S1 = State<string>();
+const S2 = State<number>();
+const R1 = Reader<number>();
 
 function* main() {
   yield* D.defer(() => console.log("defer 1"));
