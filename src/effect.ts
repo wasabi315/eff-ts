@@ -58,11 +58,6 @@ class EffectHandlerDispatcher<S> {
   }
 }
 
-type SetEffHandler<S> = <E extends Effect>(
-  eff: EffectConstructor<E>,
-  handle: EffectHandler<E, S>
-) => void;
-
 /** `Handlers<T, S>` is an object with three properties. */
 export type Handlers<T, S> = {
   /** Processes the return value of a computation enclosed by this handler. */
