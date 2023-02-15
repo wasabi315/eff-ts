@@ -26,8 +26,8 @@ export function run<T>(comp: Eff.Effectful<T>) {
     const x = Eff.matchWith(comp, {
       retc: resolve,
       exnc: reject,
-      effc(when) {
-        when(Await, (eff, k) => {
+      effc(match) {
+        return match.with(Await, (eff, k) => {
           eff.promise.then((x) => Eff.run(k.continue(x)));
           return Eff.pure();
         });

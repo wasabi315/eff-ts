@@ -1,6 +1,6 @@
 /**
  * The base class for all effects. Extend this class to create a new effect.
- * @typeParam T The type of a value to be returned when performing.
+ * @typeParam T The type of a value to be returned with performing.
  */
 export class Effect<T = unknown> {
   // For making `EffReturnType` work correctly.
@@ -11,9 +11,9 @@ export class Effect<T = unknown> {
   }
 }
 
-type EffReturnType<E extends Effect> = E extends Effect<infer T> ? T : never;
+type EffectReturnType<E extends Effect> = E extends Effect<infer T> ? T : never;
 
-type EffConstructor<E extends Effect> = {
+type EffectConstructor<E extends Effect> = {
   // deno-lint-ignore no-explicit-any
   new (...args: any[]): E;
 };
@@ -30,14 +30,37 @@ export type Continuation<T, S> = {
   continue(arg: T): Effectful<S>;
 };
 
-type EffHandler<E extends Effect, S> = (
+type EffectHandler<E extends Effect, S> = (
   eff: E,
-  k: Continuation<EffReturnType<E>, S>
+  k: Continuation<EffectReturnType<E>, S>
 ) => Effectful<S>;
 
+class EffectHandlerDispatcher<S> {
+  #eff: Effect;
+  #match: ((k: Continuation<unknown, S>) => Effectful<S>) | null = null;
+
+  constructor(eff: Effect) {
+    this.#eff = eff;
+  }
+
+  with<E extends Effect>(
+    ctor: EffectConstructor<E>,
+    handle: EffectHandler<E, S>
+  ) {
+    if (this.#eff instanceof ctor) {
+      this.#match = handle.bind(null, this.#eff);
+    }
+    return this;
+  }
+
+  get match() {
+    return this.#match;
+  }
+}
+
 type SetEffHandler<S> = <E extends Effect>(
-  eff: EffConstructor<E>,
-  handle: EffHandler<E, S>
+  eff: EffectConstructor<E>,
+  handle: EffectHandler<E, S>
 ) => void;
 
 /** `Handlers<T, S>` is an object with three properties. */
@@ -47,7 +70,7 @@ export type Handlers<T, S> = {
   /** Handles exceptions. */
   exnc(err: unknown): S;
   /** Handles effects performed by a computation enclosed by this handler. */
-  effc(when: SetEffHandler<S>): void;
+  effc(match: EffectHandlerDispatcher<S>): EffectHandlerDispatcher<S>;
 };
 
 export type EffectHandlers<T> = Pick<Handlers<T, T>, "effc">;
@@ -64,8 +87,8 @@ export function* pure<T>(x?: T): Effectful<void | T> {
 /** Performs an effect. */
 export function* perform<E extends Effect<unknown>>(
   eff: E
-): Effectful<EffReturnType<E>> {
-  return (yield eff) as EffReturnType<E>;
+): Effectful<EffectReturnType<E>> {
+  return (yield eff) as EffectReturnType<E>;
 }
 
 /** Runs an effectful computation. */
@@ -86,18 +109,6 @@ export function matchWith<T, S>(
   comp: Effectful<T>,
   handlers: Handlers<T, S>
 ): Effectful<S> {
-  const effc = (
-    eff: Effect
-  ): ((k: Continuation<unknown, S>) => Effectful<S>) | null => {
-    let matched = null;
-    handlers.effc((ctor, handler) => {
-      if (eff instanceof ctor) {
-        matched = handler.bind(null, eff);
-      }
-    });
-    return matched;
-  };
-
   function* attachHandlers(comp: Effectful<T>): Effectful<S> {
     let prev = null;
 
@@ -113,7 +124,9 @@ export function matchWith<T, S>(
         return handlers.retc(res.value);
       }
 
-      const handler = effc(res.value);
+      const handler = handlers.effc(
+        new EffectHandlerDispatcher(res.value)
+      ).match;
       if (handler === null) {
         prev = yield res.value;
         continue;
@@ -148,7 +161,7 @@ export function tryWith<T>(
   comp: Effectful<T>,
   handlers: EffectHandlers<T>
 ): Effectful<T> {
-  return matchWith<T, T>(comp, {
+  return matchWith(comp, {
     retc(x) {
       return x;
     },

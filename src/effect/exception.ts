@@ -27,8 +27,10 @@ export function run<T>(comp: Eff.Effectful<T>) {
     exnc(exn) {
       return { ok: false, error: exn };
     },
-    effc(when) {
-      when(Raise, (eff, _k) => Eff.pure({ ok: false, error: eff.error }));
+    effc(match) {
+      return match.with(Raise, (eff, _k) =>
+        Eff.pure({ ok: false, error: eff.error })
+      );
     },
   });
 }

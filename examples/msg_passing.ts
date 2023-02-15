@@ -24,8 +24,8 @@ function step(task: Eff.Effectful<void>) {
     exnc(exn) {
       throw exn;
     },
-    effc(when) {
-      when(Xchg, (eff, k) => {
+    effc(match) {
+      return match.with(Xchg, (eff, k) => {
         return Eff.pure({ done: false, msg: eff.msg, cont: k });
       });
     },

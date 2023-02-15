@@ -26,12 +26,13 @@ export function State<S>() {
   function run<T>(init: S, comp: Eff.Effectful<T>) {
     let state: S = init;
     return Eff.tryWith(comp, {
-      effc(when) {
-        when(Get, (_eff, k) => k.continue(state));
-        when(Put, (eff, k) => {
-          state = eff.state;
-          return k.continue();
-        });
+      effc(match) {
+        return match
+          .with(Get, (_eff, k) => k.continue(state))
+          .with(Put, (eff, k) => {
+            state = eff.state;
+            return k.continue();
+          });
       },
     });
   }

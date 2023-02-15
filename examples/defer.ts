@@ -23,8 +23,8 @@ function run<T>(comp: Eff.Effectful<T>) {
       thunks.forEach((thunk) => thunk());
       throw exn;
     },
-    effc(when) {
-      when(Defer, (eff, k) => {
+    effc(match) {
+      return match.with(Defer, (eff, k) => {
         thunks.unshift(eff.thunk);
         return k.continue();
       });

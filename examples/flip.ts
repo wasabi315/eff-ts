@@ -6,8 +6,8 @@ const flip = () => Eff.perform(new Flip());
 
 function run<T>(prob: number, comp: Eff.Effectful<T>) {
   return Eff.tryWith(comp, {
-    effc(when) {
-      when(Flip, (_eff, k) => k.continue(Math.random() < prob));
+    effc(match) {
+      return match.with(Flip, (_eff, k) => k.continue(Math.random() < prob));
     },
   });
 }

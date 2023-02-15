@@ -14,8 +14,8 @@ export function Reader<R>() {
   /** Runs a computation under a given environment of value. */
   function run<T>(env: R, comp: Eff.Effectful<T>) {
     return Eff.tryWith(comp, {
-      effc(when) {
-        when(Ask, (_, k) => k.continue(env));
+      effc(match) {
+        return match.with(Ask, (_, k) => k.continue(env));
       },
     });
   }

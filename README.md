@@ -53,9 +53,9 @@ function runDefer<T>(comp: Eff.Effectful<E, T>) {
     },
 
     // Effect handler: what you want to do when `comp` performs effects.
-    effc(when) {
+    effc(match) {
       // When Defer is performed, save the thunk carried by the effect then resume the continuation `k` with a void value.
-      when(Defer, (eff, k) => {
+      return match.with(Defer, (eff, k) => {
         thunks.unshift(eff.thunk);
         return k.continue();
       });
