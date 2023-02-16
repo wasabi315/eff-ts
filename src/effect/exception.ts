@@ -6,7 +6,7 @@ import * as Eff from "../effect.ts";
  */
 // deno-lint-ignore no-explicit-any
 class Raise extends Eff.Effect<any> {
-  constructor(public error: unknown) {
+  constructor(public exn: unknown) {
     super();
   }
 }
@@ -28,9 +28,10 @@ export function run<T>(comp: Eff.Effectful<T>) {
       return { ok: false, error: exn };
     },
     effc(match) {
-      return match.with(Raise, (eff, _k) =>
-        Eff.pure({ ok: false, error: eff.error })
-      );
+      return match.with(Raise, function* (eff, k) {
+        yield* k.discontinue(eff.exn);
+        return { ok: false, error: eff.exn };
+      });
     },
   });
 }

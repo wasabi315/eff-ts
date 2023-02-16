@@ -93,7 +93,6 @@ Eff.run(runDefer(main()));
 
 ## Future works
 
-- [ ] Provide the [discontinue](https://v2.ocaml.org/api/Effect.Deep.html#VALdiscontinue) functionality.
 - [ ] Be effect-safe.
 
 ## Related works and references

@@ -20,8 +20,12 @@ function* main() {
   yield* S2.modify((str) => str + ", world!");
   console.log(yield* S1.get(), yield* S2.get());
 
-  if ((yield* S1.get()) === 100) {
-    yield* E.raise("S1's state is 100");
+  try {
+    if ((yield* S1.get()) === 100) {
+      yield* E.raise("S1's state is 100");
+    }
+  } finally {
+    console.log("Actual S1's state is", yield* S1.get());
   }
 
   // Will not be executed.

@@ -28,6 +28,7 @@ export type Effectful<T> = Generator<Effect, T>;
  */
 export type Continuation<T, S> = {
   continue(arg: T): Effectful<S>;
+  discontinue(exn: unknown): Effectful<S>;
 };
 
 type EffectHandler<E extends Effect, S> = (
@@ -105,12 +106,12 @@ export function matchWith<T, S>(
   handlers: Handlers<T, S>
 ): Effectful<S> {
   function* attachHandlers(comp: Effectful<T>): Effectful<S> {
-    let prev = null;
+    let next = () => comp.next();
 
     while (true) {
       let res;
       try {
-        res = comp.next(prev);
+        res = next();
       } catch (err) {
         return handlers.exnc(err);
       }
@@ -122,12 +123,16 @@ export function matchWith<T, S>(
       const handler = handlers.effc(
         new EffectHandlerDispatcher(res.value)
       ).match;
-      if (handler === null) {
-        prev = yield res.value;
-        continue;
+      if (handler !== null) {
+        return yield* handler(createCont(comp));
       }
 
-      return yield* handler(createCont(comp));
+      try {
+        const x = yield res.value;
+        next = () => comp.next(x);
+      } catch (err) {
+        next = () => comp.throw(err);
+      }
     }
   }
 
@@ -140,6 +145,13 @@ export function matchWith<T, S>(
         }
         resumed = true;
         return attachHandlers(_continue(comp, x));
+      },
+      discontinue(exn) {
+        if (resumed) {
+          throw new Error("Continuation already resumed");
+        }
+        resumed = true;
+        return attachHandlers(_discontinue(comp, exn));
       },
     };
   }
@@ -175,6 +187,20 @@ function _continue<T>(k: Effectful<T>, x: unknown): Effectful<T> {
     next() {
       this.next = k.next.bind(k);
       return k.next(x);
+    },
+    return: k.return.bind(k),
+    throw: k.throw.bind(k),
+  };
+}
+
+function _discontinue<T>(k: Effectful<T>, exn: unknown): Effectful<T> {
+  return {
+    [Symbol.iterator]() {
+      return this;
+    },
+    next() {
+      this.next = k.next.bind(k);
+      return k.throw(exn);
     },
     return: k.return.bind(k),
     throw: k.throw.bind(k),
