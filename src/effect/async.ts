@@ -23,16 +23,20 @@ export const _await = <T>(promise: Promise<T>) =>
  */
 export function run<T>(comp: Eff.Effectful<T>) {
   return new Promise<T>((resolve, reject) => {
-    const x = Eff.matchWith(comp, {
+    const chainPromise = Eff.matchWith(comp, {
       retc: resolve,
       exnc: reject,
       effc(match) {
         return match.with(Await, (eff, k) => {
-          eff.promise.then((x) => Eff.run(k.continue(x)));
+          eff.promise.then(
+            (x) => Eff.run(k.continue(x)),
+            (err) => Eff.run(k.discontinue(err)),
+          );
           return Eff.pure();
         });
       },
     });
-    Eff.run(x);
+
+    Eff.run(chainPromise);
   });
 }
