@@ -30,7 +30,7 @@ export function run<T>(comp: Eff.Effectful<T>) {
         return match.with(Await, (eff, k) => {
           eff.promise.then(
             (x) => Eff.run(k.continue(x)),
-            (err) => Eff.run(k.discontinue(err)),
+            (err) => Eff.run(k.discontinue(err))
           );
           return Eff.pure();
         });

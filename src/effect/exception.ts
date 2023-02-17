@@ -28,10 +28,7 @@ export function run<T>(comp: Eff.Effectful<T>) {
       return { ok: false, error: exn };
     },
     effc(match) {
-      return match.with(Raise, function* (eff, k) {
-        yield* k.discontinue(eff.exn);
-        return { ok: false, error: eff.exn };
-      });
+      return match.with(Raise, (eff, k) => k.discontinue(eff.exn));
     },
   });
 }
