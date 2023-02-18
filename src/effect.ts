@@ -33,7 +33,7 @@ export type Continuation<T, S> = {
 
 type EffectHandler<E extends Effect, S> = (
   eff: E,
-  k: Continuation<EffectReturnType<E>, S>
+  k: Continuation<EffectReturnType<E>, S>,
 ) => Effectful<S>;
 
 class EffectHandlerDispatcher<S> {
@@ -46,7 +46,7 @@ class EffectHandlerDispatcher<S> {
 
   with<E extends Effect>(
     ctor: EffectConstructor<E>,
-    handle: EffectHandler<E, S>
+    handle: EffectHandler<E, S>,
   ) {
     if (this.#eff instanceof ctor) {
       this.#match = handle.bind(null, this.#eff);
@@ -82,7 +82,7 @@ export function* pure<T>(x?: T): Effectful<void | T> {
 
 /** Performs an effect. */
 export function* perform<E extends Effect<unknown>>(
-  eff: E
+  eff: E,
 ): Effectful<EffectReturnType<E>> {
   return (yield eff) as EffectReturnType<E>;
 }
@@ -103,7 +103,7 @@ export function run<T>(comp: Effectful<T>): T {
  */
 export function matchWith<T, S>(
   comp: Effectful<T>,
-  handlers: Handlers<T, S>
+  handlers: Handlers<T, S>,
 ): Effectful<S> {
   function* attachHandlers(comp: Effectful<T>): Effectful<S> {
     let next = () => comp.next();
@@ -121,7 +121,7 @@ export function matchWith<T, S>(
       }
 
       const handler = handlers.effc(
-        new EffectHandlerDispatcher(res.value)
+        new EffectHandlerDispatcher(res.value),
       ).match;
       if (handler !== null) {
         return yield* handler(createCont(comp));
@@ -166,7 +166,7 @@ export function matchWith<T, S>(
  */
 export function tryWith<T>(
   comp: Effectful<T>,
-  handlers: EffectHandlers<T>
+  handlers: EffectHandlers<T>,
 ): Effectful<T> {
   return matchWith(comp, {
     retc(x) {

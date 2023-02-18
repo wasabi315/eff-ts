@@ -1,4 +1,4 @@
-import { Async as A, Exception as E, State, Reader } from "../src/mod.ts";
+import { Async as A, Exception as E, Reader, State } from "../src/mod.ts";
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 

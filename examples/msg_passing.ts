@@ -10,11 +10,7 @@ class Xchg extends Eff.Effect<number> {
 
 type Status =
   | { done: true }
-  | {
-      done: false;
-      msg: number;
-      cont: Eff.Continuation<number, Status>;
-    };
+  | { done: false; msg: number; cont: Eff.Continuation<number, Status> };
 
 function step(task: Eff.Effectful<void>) {
   return Eff.matchWith(task, {
@@ -34,7 +30,7 @@ function step(task: Eff.Effectful<void>) {
 
 function* runBoth(
   steps1: Eff.Effectful<Status>,
-  steps2: Eff.Effectful<Status>
+  steps2: Eff.Effectful<Status>,
 ): Eff.Effectful<void> {
   const [status1, status2] = [yield* steps1, yield* steps2];
   if (status1.done && status2.done) {
@@ -43,7 +39,7 @@ function* runBoth(
   if (!status1.done && !status2.done) {
     return yield* runBoth(
       status1.cont.continue(status2.msg),
-      status2.cont.continue(status1.msg)
+      status2.cont.continue(status1.msg),
     );
   }
   throw new Error("Improper synchronization");
