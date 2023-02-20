@@ -1,8 +1,16 @@
 // Translated from https://github.com/ocaml-multicore/ocaml-effects-tutorial/blob/master/sources/msg_passing.ml .
 
-import { Effect as Eff } from "../src/mod.ts";
+import {
+  Continuation,
+  Effect,
+  Effectful,
+  matchWith,
+  perform,
+  pure,
+  runEffectful,
+} from "../src/mod.ts";
 
-class Xchg extends Eff.Effect<number> {
+class Xchg extends Effect<number> {
   constructor(public msg: number) {
     super();
   }
@@ -10,10 +18,10 @@ class Xchg extends Eff.Effect<number> {
 
 type Status =
   | { done: true }
-  | { done: false; msg: number; cont: Eff.Continuation<number, Status> };
+  | { done: false; msg: number; cont: Continuation<number, Status> };
 
-function step(task: Eff.Effectful<void>) {
-  return Eff.matchWith(task, {
+function step(task: Effectful<void>) {
+  return matchWith(task, {
     retc(): Status {
       return { done: true };
     },
@@ -22,16 +30,16 @@ function step(task: Eff.Effectful<void>) {
     },
     effc(match) {
       return match.with(Xchg, (eff, k) => {
-        return Eff.pure({ done: false, msg: eff.msg, cont: k });
+        return pure({ done: false, msg: eff.msg, cont: k });
       });
     },
   });
 }
 
 function* runBoth(
-  steps1: Eff.Effectful<Status>,
-  steps2: Eff.Effectful<Status>,
-): Eff.Effectful<void> {
+  steps1: Effectful<Status>,
+  steps2: Effectful<Status>,
+): Effectful<void> {
   const [status1, status2] = [yield* steps1, yield* steps2];
   if (status1.done && status2.done) {
     return;
@@ -45,16 +53,16 @@ function* runBoth(
   throw new Error("Improper synchronization");
 }
 
-function* task(name: string, n: number): Eff.Effectful<void> {
+function* task(name: string, n: number): Effectful<void> {
   if (n === 0) {
     return;
   }
 
   console.log(`${name}: sending ${n}!`);
-  const v = yield* Eff.perform(new Xchg(n));
+  const v = yield* perform(new Xchg(n));
   console.log(`${name}: received ${v}!`);
 
   yield* task(name, n - 1);
 }
 
-Eff.run(runBoth(step(task("a", 3)), step(task("b", 3))));
+runEffectful(runBoth(step(task("a", 3)), step(task("b", 3))));

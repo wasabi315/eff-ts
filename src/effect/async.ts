@@ -1,42 +1,47 @@
-import * as Eff from "../effect.ts";
+import {
+  Effect,
+  Effectful,
+  matchWith,
+  perform,
+  pure,
+  runEffectful,
+} from "../effect.ts";
 
 /**
  * An effect that waits for a `Promise` fulfilled.
  * Enables us to write asynchronous computations without the built-in async-await construct.
  * @typeParam T The type of a value to be returned by the `Promise`.
  */
-class Await<T = unknown> extends Eff.Effect<T> {
+class WaitFor<T = unknown> extends Effect<T> {
   constructor(public promise: Promise<T>) {
     super();
   }
 }
 
-export { type Await };
-
 /** Awaits a `Promise` to be fulfilled. */
-export const _await = <T>(promise: Promise<T>) =>
-  Eff.perform(new Await(promise));
+export const waitFor = <T>(promise: Promise<T>) =>
+  perform(new WaitFor(promise));
 
 /**
  * Runs an asynchronous computation.
  * Note that this runner can only be outermost or an exception will be thrown.
  */
-export function run<T>(comp: Eff.Effectful<T>) {
+export function runAsync<T>(comp: Effectful<T>) {
   return new Promise<T>((resolve, reject) => {
-    const chainPromise = Eff.matchWith(comp, {
+    const chainPromise = matchWith(comp, {
       retc: resolve,
       exnc: reject,
       effc(match) {
-        return match.with(Await, (eff, k) => {
+        return match.with(WaitFor, (eff, k) => {
           eff.promise.then(
-            (x) => Eff.run(k.continue(x)),
-            (err) => Eff.run(k.discontinue(err)),
+            (x) => runEffectful(k.continue(x)),
+            (err) => runEffectful(k.discontinue(err)),
           );
-          return Eff.pure();
+          return pure();
         });
       },
     });
 
-    Eff.run(chainPromise);
+    runEffectful(chainPromise);
   });
 }

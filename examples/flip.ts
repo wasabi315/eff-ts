@@ -1,13 +1,19 @@
-import { Effect as Eff } from "../src/mod.ts";
+import {
+  Effect,
+  Effectful,
+  perform,
+  runEffectful,
+  tryWith,
+} from "../src/mod.ts";
 
-class Flip extends Eff.Effect<boolean> {}
+class Flip extends Effect<boolean> {}
 
-const flip = () => Eff.perform(new Flip());
+const flip = () => perform(new Flip());
 
-function run<T>(prob: number, comp: Eff.Effectful<T>) {
-  return Eff.tryWith(comp, {
+function runFlip<T>(prob: number, comp: Effectful<T>) {
+  return tryWith(comp, {
     effc(match) {
-      return match.with(Flip, (_eff, k) => k.continue(Math.random() < prob));
+      return match.with(Flip, (_, k) => k.continue(Math.random() < prob));
     },
   });
 }
@@ -21,9 +27,9 @@ function* main() {
 }
 
 console.log("------------");
-Eff.run(run(0, main()));
+runEffectful(runFlip(0, main()));
 console.log("------------");
-Eff.run(run(0.5, main()));
+runEffectful(runFlip(0.5, main()));
 console.log("------------");
-Eff.run(run(1, main()));
+runEffectful(runFlip(1, main()));
 console.log("------------");

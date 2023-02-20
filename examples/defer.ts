@@ -1,20 +1,26 @@
 // Translated from https://go.dev/tour/flowcontrol/13 .
 // Non-local control flows can be implemented with effect handlers.
 
-import { Effect as Eff } from "../src/mod.ts";
+import {
+  Effect,
+  Effectful,
+  matchWith,
+  perform,
+  runEffectful,
+} from "../src/mod.ts";
 
-class Defer extends Eff.Effect<void> {
+class Defer extends Effect<void> {
   constructor(public thunk: () => void) {
     super();
   }
 }
 
-const defer = (thunk: () => void) => Eff.perform(new Defer(thunk));
+const defer = (thunk: () => void) => perform(new Defer(thunk));
 
-function run<T>(comp: Eff.Effectful<T>) {
+function run<T>(comp: Effectful<T>) {
   const thunks: (() => void)[] = [];
 
-  return Eff.matchWith(comp, {
+  return matchWith(comp, {
     retc(x) {
       thunks.forEach((thunk) => thunk());
       return x;
@@ -42,4 +48,4 @@ function* main() {
   console.log("done");
 }
 
-Eff.run(run(main()));
+runEffectful(run(main()));

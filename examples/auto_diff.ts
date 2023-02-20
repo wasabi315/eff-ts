@@ -1,7 +1,13 @@
 import { assertEquals } from "https://deno.land/std@0.177.0/testing/asserts.ts";
 
-import { matchWith } from "../src/effect.ts";
-import { Effect as Eff } from "../src/mod.ts";
+import {
+  Effect,
+  Effectful,
+  matchWith,
+  perform,
+  pure,
+  runEffectful,
+} from "../src/mod.ts";
 
 type Ad = {
   readonly value: number;
@@ -13,32 +19,32 @@ const mk = (value: number): Ad => ({
   deriv: 0,
 });
 
-class Add extends Eff.Effect<Ad> {
+class Add extends Effect<Ad> {
   constructor(public lhs: Ad, public rhs: Ad) {
     super();
   }
 }
 
-class Sub extends Eff.Effect<Ad> {
+class Sub extends Effect<Ad> {
   constructor(public lhs: Ad, public rhs: Ad) {
     super();
   }
 }
 
-class Mul extends Eff.Effect<Ad> {
+class Mul extends Effect<Ad> {
   constructor(public lhs: Ad, public rhs: Ad) {
     super();
   }
 }
 
-class Div extends Eff.Effect<Ad> {
+class Div extends Effect<Ad> {
   constructor(public lhs: Ad, public rhs: Ad) {
     super();
   }
 }
 
-function run(f: Eff.Effectful<Ad>): void {
-  Eff.run(matchWith(f, {
+function run(f: Effectful<Ad>): void {
+  runEffectful(matchWith(f, {
     retc(r) {
       r.deriv = 1;
       return r;
@@ -82,18 +88,18 @@ function run(f: Eff.Effectful<Ad>): void {
 }
 
 class Expr {
-  constructor(public expr: () => Eff.Effectful<Ad>) {}
+  constructor(public expr: () => Effectful<Ad>) {}
 
   static mk(x: Ad) {
-    return new Expr(() => Eff.pure(x));
+    return new Expr(() => pure(x));
   }
 
-  #mkBinOp = (eff: (x: Ad, y: Ad) => Eff.Effect<Ad>) => {
+  #mkBinOp = (eff: (x: Ad, y: Ad) => Effect<Ad>) => {
     return (rhs: this) => {
       return new Expr((function* (this: Expr) {
         const x = yield* this.expr();
         const y = yield* rhs.expr();
-        return yield* Eff.perform(eff(x, y));
+        return yield* perform(eff(x, y));
       }).bind(this));
     };
   };

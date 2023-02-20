@@ -3,7 +3,7 @@
  * @typeParam T The type of a value to be returned with performing.
  */
 export class Effect<T = unknown> {
-  // For making `EffReturnType` work correctly.
+  // For making `EffectReturnType` work correctly.
   #_T!: T;
 
   toString() {
@@ -11,12 +11,7 @@ export class Effect<T = unknown> {
   }
 }
 
-type EffectReturnType<E extends Effect> = E extends Effect<infer T> ? T : never;
-
-type EffectConstructor<E extends Effect> = {
-  // deno-lint-ignore no-explicit-any
-  new (...args: any[]): E;
-};
+type EffectReturnType<E> = E extends Effect<infer T> ? T : never;
 
 /**
  * `Effectful<T>` is an effectful computation that eventually returns a `T` value performing effects along the way.
@@ -36,6 +31,9 @@ type EffectHandler<E extends Effect, S> = (
   k: Continuation<EffectReturnType<E>, S>,
 ) => Effectful<S>;
 
+// deno-lint-ignore no-explicit-any
+type ConstructorType<T> = new (..._: any) => T;
+
 class EffectHandlerDispatcher<S> {
   #eff: Effect;
   #match: ((k: Continuation<unknown, S>) => Effectful<S>) | null = null;
@@ -45,7 +43,7 @@ class EffectHandlerDispatcher<S> {
   }
 
   with<E extends Effect>(
-    ctor: EffectConstructor<E>,
+    ctor: ConstructorType<E>,
     handle: EffectHandler<E, S>,
   ) {
     if (this.#eff instanceof ctor) {
@@ -88,7 +86,7 @@ export function* perform<E extends Effect<unknown>>(
 }
 
 /** Runs an effectful computation. */
-export function run<T>(comp: Effectful<T>): T {
+export function runEffectful<T>(comp: Effectful<T>): T {
   const { value, done } = comp.next();
   if (!done) {
     throw new Error(`Unhandled Effect: ${value}`);
