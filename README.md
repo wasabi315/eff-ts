@@ -23,7 +23,7 @@ The following code defines an effect that behaves like Golang's defer construct.
 
 ```typescript
 // 1. Define `Defer` effect by extending `Effect`.
-class Defer extends Eff.Effect<void> {
+class Defer extends Effect<void> {
   // Defer carries a nullary function which will be invoked later.
   constructor(public thunk: () => void) {
     super();
@@ -31,13 +31,13 @@ class Defer extends Eff.Effect<void> {
 }
 
 // 2. Define a helper function that simply perform `Defer`.
-const defer = (thunk: () => void) => Eff.perform(new Defer(thunk));
+const defer = (thunk: () => void) => perform(new Defer(thunk));
 
 // 3. Define a function that handle `Defer` with the `matchWith` function.
-function runDefer<T>(comp: Eff.Effectful<E, T>) {
+function runDefer<T>(comp: Effectful<E, T>) {
   const thunks: (() => void)[] = [];
 
-  return Eff.matchWith(comp, {
+  return matchWith(comp, {
     // Value handler: what you want to do when `comp` returns a value `x`.
     retc(x) {
       // Execute thunks then return `x` as is.
@@ -68,7 +68,7 @@ Now you are ready to use the `Defer` effect.
 
 ```typescript
 // Effectful computations are defined using generators.
-function* main(): Eff.Effectful<void> {
+function* main(): Effectful<void> {
   console.log("counting");
 
   for (let i = 0; i < 10; i++) {
@@ -82,7 +82,7 @@ function* main(): Eff.Effectful<void> {
 
 // Wrap `main()` with `runDefer` to handle the `Defer` effect.
 // Then actually execute the wrapped computation with `run`.
-Eff.run(runDefer(main()));
+runEffectful(runDefer(main()));
 ```
 
 ## How does it work?
