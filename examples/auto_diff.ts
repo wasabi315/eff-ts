@@ -19,29 +19,15 @@ const mk = (value: number): Ad => ({
   deriv: 0,
 });
 
-class Add extends Effect<Ad> {
+class BinOp extends Effect<Ad> {
   constructor(public lhs: Ad, public rhs: Ad) {
     super();
   }
 }
-
-class Sub extends Effect<Ad> {
-  constructor(public lhs: Ad, public rhs: Ad) {
-    super();
-  }
-}
-
-class Mul extends Effect<Ad> {
-  constructor(public lhs: Ad, public rhs: Ad) {
-    super();
-  }
-}
-
-class Div extends Effect<Ad> {
-  constructor(public lhs: Ad, public rhs: Ad) {
-    super();
-  }
-}
+class Add extends BinOp {}
+class Sub extends BinOp {}
+class Mul extends BinOp {}
+class Div extends BinOp {}
 
 function run(f: Effectful<Ad>): void {
   runEffectful(matchWith(f, {
@@ -126,9 +112,8 @@ function grad<Exprs extends Expr[]>(
 
 // f(x) = x^2 + x^3
 // df/dx = 2*x + 3*x^2
-function f(x: Expr) {
-  return x.mul(x).add(x.mul(x).mul(x));
-}
+const f = (x: Expr) => x.mul(x).add(x.mul(x).mul(x));
+
 for (let x = 0; x < 10; x++) {
   assertEquals(grad(f, x), [(2 * x) + (3 * x * x)]);
 }
@@ -136,9 +121,8 @@ for (let x = 0; x < 10; x++) {
 // g(x, y) = x^2 * y^4
 // dg/dx = 2 * x * y^4
 // dg/dy = 4 * x^2 * y^3
-function g(x: Expr, y: Expr) {
-  return x.mul(x).mul(y).mul(y).mul(y).mul(y);
-}
+const g = (x: Expr, y: Expr) => x.mul(x).mul(y).mul(y).mul(y).mul(y);
+
 for (let x = 0; x < 10; x++) {
   for (let y = 0; y < 10; y++) {
     assertEquals(grad(g, x, y), [
