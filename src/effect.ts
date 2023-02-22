@@ -142,14 +142,14 @@ export function matchWith<T, S>(
           throw new Error("Continuation already resumed");
         }
         resumed = true;
-        return attachHandlers(_continue(comp, x));
+        return attachHandlers(setFirstNextCall(comp, () => comp.next(x)));
       },
       discontinue(exn) {
         if (resumed) {
           throw new Error("Continuation already resumed");
         }
         resumed = true;
-        return attachHandlers(_discontinue(comp, exn));
+        return attachHandlers(setFirstNextCall(comp, () => comp.throw(exn)));
       },
     };
   }
@@ -177,30 +177,19 @@ export function tryWith<T>(
   });
 }
 
-function _continue<T>(k: Effectful<T>, x: unknown): Effectful<T> {
+function setFirstNextCall<T, S>(
+  gen: Generator<T, S>,
+  next: () => IteratorResult<T, S>,
+): Generator<T, S> {
   return {
     [Symbol.iterator]() {
       return this;
     },
     next() {
-      this.next = k.next.bind(k);
-      return k.next(x);
+      this.next = gen.next.bind(gen);
+      return next();
     },
-    return: k.return.bind(k),
-    throw: k.throw.bind(k),
-  };
-}
-
-function _discontinue<T>(k: Effectful<T>, exn: unknown): Effectful<T> {
-  return {
-    [Symbol.iterator]() {
-      return this;
-    },
-    next() {
-      this.next = k.next.bind(k);
-      return k.throw(exn);
-    },
-    return: k.return.bind(k),
-    throw: k.throw.bind(k),
+    return: gen.return.bind(gen),
+    throw: gen.throw.bind(gen),
   };
 }
