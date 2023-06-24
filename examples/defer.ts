@@ -30,7 +30,7 @@ function run<T>(comp: Effectful<T>) {
       throw exn;
     },
     effc(match) {
-      return match.with(Defer, (eff, k) => {
+      return match.register(Defer, (eff, k) => {
         thunks.unshift(eff.thunk);
         return k.continue();
       });

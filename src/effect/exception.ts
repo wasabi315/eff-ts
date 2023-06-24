@@ -25,8 +25,8 @@ export function runAsResult<T>(comp: Effectful<T>) {
     exnc(exn) {
       return { ok: false, error: exn };
     },
-    effc(match) {
-      return match.with(Raise, (eff, k) => k.discontinue(eff.exn));
+    effc(reg) {
+      return reg.register(Raise, (eff, k) => k.discontinue(eff.exn));
     },
   });
 }

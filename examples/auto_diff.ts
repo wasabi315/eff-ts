@@ -38,37 +38,36 @@ function run(f: Effectful<Ad>): void {
     exnc(err) {
       throw err;
     },
-    effc(match) {
-      return match
-        .with(Add, function* (eff, k) {
-          const x = mk(eff.lhs.value + eff.rhs.value);
-          yield* k.continue(x);
-          eff.lhs.deriv += x.deriv;
-          eff.rhs.deriv += x.deriv;
-          return x;
-        })
-        .with(Sub, function* (eff, k) {
-          const x = mk(eff.lhs.value - eff.rhs.value);
-          yield* k.continue(x);
-          eff.lhs.deriv += x.deriv;
-          eff.rhs.deriv -= x.deriv;
-          return x;
-        })
-        .with(Mul, function* (eff, k) {
-          const x = mk(eff.lhs.value * eff.rhs.value);
-          yield* k.continue(x);
-          eff.lhs.deriv += eff.rhs.value * x.deriv;
-          eff.rhs.deriv += eff.lhs.value * x.deriv;
-          return x;
-        })
-        .with(Div, function* (eff, k) {
-          const x = mk(eff.lhs.value / eff.rhs.value);
-          yield* k.continue(x);
-          eff.lhs.deriv += x.deriv / eff.rhs.value;
-          eff.rhs.deriv -= (x.value * eff.lhs.value) /
-            (eff.rhs.value * eff.rhs.value);
-          return x;
-        });
+    effc(reg) {
+      reg.register(Add, function* (eff, k) {
+        const x = mk(eff.lhs.value + eff.rhs.value);
+        yield* k.continue(x);
+        eff.lhs.deriv += x.deriv;
+        eff.rhs.deriv += x.deriv;
+        return x;
+      });
+      reg.register(Sub, function* (eff, k) {
+        const x = mk(eff.lhs.value - eff.rhs.value);
+        yield* k.continue(x);
+        eff.lhs.deriv += x.deriv;
+        eff.rhs.deriv -= x.deriv;
+        return x;
+      });
+      reg.register(Mul, function* (eff, k) {
+        const x = mk(eff.lhs.value * eff.rhs.value);
+        yield* k.continue(x);
+        eff.lhs.deriv += eff.rhs.value * x.deriv;
+        eff.rhs.deriv += eff.lhs.value * x.deriv;
+        return x;
+      });
+      reg.register(Div, function* (eff, k) {
+        const x = mk(eff.lhs.value / eff.rhs.value);
+        yield* k.continue(x);
+        eff.lhs.deriv += x.deriv / eff.rhs.value;
+        eff.rhs.deriv -= (x.value * eff.lhs.value) /
+          (eff.rhs.value * eff.rhs.value);
+        return x;
+      });
     },
   }));
 }

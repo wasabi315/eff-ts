@@ -26,13 +26,9 @@ export function State<S>() {
   function run<T>(init: S, comp: Effectful<T>) {
     let state: S = init;
     return tryWith(comp, {
-      effc(match) {
-        return match
-          .with(Get, (_, k) => k.continue(state))
-          .with(Put, (eff, k) => {
-            state = eff.state;
-            return k.continue();
-          });
+      effc(reg) {
+        reg.register(Get, (_, k) => k.continue(state));
+        reg.register(Put, (eff, k) => k.continue(void (state = eff.state)));
       },
     });
   }

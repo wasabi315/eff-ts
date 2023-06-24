@@ -12,7 +12,7 @@ import {
  * Enables us to write asynchronous computations without the built-in async-await construct.
  * @typeParam T The type of a value to be returned by the `Promise`.
  */
-class WaitFor<T = unknown> extends Effect<T> {
+class WaitFor<T> extends Effect<T> {
   constructor(public promise: Promise<T>) {
     super();
   }
@@ -31,8 +31,8 @@ export function runAsync<T>(comp: Effectful<T>) {
     const chainPromise = matchWith(comp, {
       retc: resolve,
       exnc: reject,
-      effc(match) {
-        return match.with(WaitFor, (eff, k) => {
+      effc(reg) {
+        reg.register(WaitFor, (eff, k) => {
           eff.promise.then(
             (x) => runEffectful(k.continue(x)),
             (err) => runEffectful(k.discontinue(err)),

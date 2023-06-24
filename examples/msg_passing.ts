@@ -28,8 +28,8 @@ function step(task: Effectful<void>) {
     exnc(exn) {
       throw exn;
     },
-    effc(match) {
-      return match.with(Xchg, (eff, k) => {
+    effc(reg) {
+      reg.register(Xchg, (eff, k) => {
         return pure({ done: false, msg: eff.msg, cont: k });
       });
     },
