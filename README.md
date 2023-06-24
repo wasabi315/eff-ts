@@ -7,7 +7,6 @@ This is for my educational purpose.
 
 - Provides mostly the same API as OCaml's [deep handlers](https://v2.ocaml.org/api/Effect.Deep.html).
 - Fully typed.
-- Aims to be effect-safe. See the [effect-safe](https://github.com/wasabi315/eff-ts/tree/effect-safe) branch for in-progress implementation.
 
 ## Try it!
 
@@ -53,9 +52,9 @@ function runDefer<T>(comp: Effectful<E, T>) {
     },
 
     // Effect handler: what you want to do when `comp` performs effects.
-    effc(match) {
+    effc(reg) {
       // When Defer is performed, save the thunk carried by the effect then resume the continuation `k` with a void value.
-      return match.with(Defer, (eff, k) => {
+      reg.register(Defer, (eff, k) => {
         thunks.unshift(eff.thunk);
         return k.continue();
       });
@@ -90,10 +89,6 @@ runEffectful(runDefer(main()));
 > An effectful computation can be represented as a generator that yields effects.
 
 :construction: TODO
-
-## Future works
-
-- [ ] Be effect-safe.
 
 ## Related works and references
 
