@@ -1,88 +1,123 @@
 # eff-ts
 
-An effect handler implementation with JavaScript/TypeScript Generators.
-This is for my educational purpose.
+An effect handler implementation using JavaScript/TypeScript Generators that mimics OCaml's deep effect handlers.
 
-## Features
+## A basic example
 
-- Provides mostly the same API as OCaml's [deep handlers](https://v2.ocaml.org/api/Effect.Deep.html).
-- Fully typed.
+Here is explained how to define and use effects using `Defer` as an example. The full code is available in [examples/defer.ts](https://github.com/wasabi315/eff-ts/tree/main/examples/defer.ts).
 
-## Try it!
+1. Define an effect by extending the `Effect` class. `Effect` takes a type parameter that represents the return type of the effectful computation, `void` in this case.
 
-```sh
-deno run examples/defer.ts
-```
+    ```typescript
+    class Defer extends Effect<void> {
+      // Defer carries a nullary function that will be invoked later.
+      thunk: () => void;
+      constructor(thunk: () => void) {
+        super();
+        this.thunk = thunk;
+      }
+    }
+    ```
 
-See the [examples](https://github.com/wasabi315/eff-ts/tree/main/examples) directory for more examples.
+2. Define a helper function that simply performs the `Defer` effect defined above.
 
-## How to define and use effects
+    ```typescript
+    const defer = (thunk: () => void) => perform(new Defer(thunk));
+    ```
 
-The following code defines an effect that behaves like Golang's defer construct.
+3. Define a handler for the `Defer` effect using `matchWith`. `matchWith` is like `try`-`catch` in JavaScript, but for effects.
 
-```typescript
-// 1. Define `Defer` effect by extending `Effect`.
-class Defer extends Effect<void> {
-  // Defer carries a nullary function which will be invoked later.
-  constructor(public thunk: () => void) {
-    super();
-  }
-}
+    ```typescript
+    function runDefer<T>(comp: Effectful<E, T>) {
+      // Save thunks to be executed later.
+      const thunks: (() => void)[] = [];
+    ```
 
-// 2. Define a helper function that simply perform `Defer`.
-const defer = (thunk: () => void) => perform(new Defer(thunk));
+    The `matchWith` function takes two arguments. The first argument is the effectful computation to be handled.
 
-// 3. Define a function that handle `Defer` with the `matchWith` function.
-function runDefer<T>(comp: Effectful<E, T>) {
-  const thunks: (() => void)[] = [];
+    ```typescript
+      return matchWith(comp, {
+    ```
 
-  return matchWith(comp, {
-    // Value handler: what you want to do when `comp` returns a value `x`.
-    retc(x) {
-      // Execute thunks then return `x` as is.
-      thunks.forEach((thunk) => thunk());
-      return x;
-    },
+    The second argument is an object that contains three handlers: `retc`, `exnc`, and `effc`.
+    `retc` is the *value handler*, which is called when the computation returns a value. In this `Defer` example, execute the saved thunks then return the value as is.
 
-    // Exception handler: what you want to do when `comp` throws an exception `exn`.
-    exnc(exn) {
-      // Execute thunks then rethrow `err`.
-      thunks.forEach((thunk) => thunk());
-      throw exn;
-    },
+    ```typescript
+        retc(x) {
+          thunks.forEach((thunk) => thunk());
+          return x;
+        },
+    ```
 
-    // Effect handler: what you want to do when `comp` performs effects.
-    effc(reg) {
-      // When Defer is performed, save the thunk carried by the effect then resume the continuation `k` with a void value.
-      reg.register(Defer, (eff, k) => {
-        thunks.unshift(eff.thunk);
-        return k.continue();
+    `exnc` is the *exception handler*, which is called when the computation throws an exception. Here, like `retc`, execute the saved thunks then rethrow the exception.
+
+    ```typescript
+        exnc(exn) {
+          thunks.forEach((thunk) => thunk());
+          throw exn;
+        },
+    ```
+
+    `effc` is the *effect handler*, which gets called when the computation performs effects. `on`, the argument of `effc`, is for registering handlers for each effect. The first argument of `on` is the constructor of an effect (say `E`) and the second argument is a handler function that takes an effect value of type `E` and its continuation. In this example, save the thunk carried before resuming the computation. Note that you do not need to handle all of the effects in one handler. Effects not handled are passed to the surrounding handler like `try`-`catch`.
+
+    ```typescript
+        effc(on) {
+          on(Defer, (eff: Defer, cont: Continuation<void, T>) => {
+            thunks.unshift(eff.thunk);
+            return cont.continue();
+          });
+        },
       });
-    },
-  });
-}
-```
+    }
+    ```
 
-Now you are ready to use the `Defer` effect.
+    Here is the full code for the `runDefer` function.
 
-```typescript
-// Effectful computations are defined using generators.
-function* main(): Effectful<void> {
-  console.log("counting");
+    ```typescript
+    function runDefer<T>(comp: Effectful<E, T>) {
+      // Save thunks to be executed later.
+      const thunks: (() => void)[] = [];
+      return matchWith(comp, {
+        retc(x) {
+          thunks.forEach((thunk) => thunk());
+          return x;
+        },
+        exnc(exn) {
+          thunks.forEach((thunk) => thunk());
+          throw exn;
+        },
+        effc(on) {
+          // The type annotaion for the handler function is optional as it can be inferred.
+          on(Defer, (eff, cont) => {
+            thunks.unshift(eff.thunk);
+            return cont.continue();
+          });
+        },
+      });
+    }
+    ```
 
-  for (let i = 0; i < 10; i++) {
-    // Use `yield*` when performing effectful computations.
-    // It is like the `await` keyword in `async` functions.
-    yield* defer(() => console.log(i));
-  }
+4. Now you are ready to use the `Defer` effect. Define an effectful computation using generator functions. Use the `yield*` keword to perform effects like the `await` keyword in `async` functions.
 
-  console.log("done");
-}
+    ```typescript
+    function* main(): Effectful<void> {
+      console.log("counting");
 
-// Wrap `main()` with `runDefer` to handle the `Defer` effect.
-// Then actually execute the wrapped computation with `run`.
-runEffectful(runDefer(main()));
-```
+      for (let i = 0; i < 10; i++) {
+        yield* defer(() => console.log(i));
+      }
+
+      console.log("done");
+    }
+    ```
+
+5. Finally, run the effectful computation using the `runEffectful` function after wrapping it with the handler.
+
+    ```typescript
+    runEffectful(runDefer(main()));
+    ```
+
+For more examples, including the `state` effects, see the [examples](https://github.com/wasabi315/eff-ts/tree/main/examples) directory.
 
 ## How does it work?
 

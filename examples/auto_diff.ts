@@ -101,8 +101,8 @@ class Expr {
 
 function grad<T extends Expr[]>(
   f: (...args: T) => Expr,
-  ...args: { [_ in keyof T]: number }
-): { [_ in keyof T]: number } {
+  ...args: { [i in keyof T]: number }
+): { [i in keyof T]: number } {
   const ads = args.map(mk);
   const exprs = ads.map(Expr.mk) as T;
   f(...exprs).diff();

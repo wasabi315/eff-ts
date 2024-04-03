@@ -29,8 +29,8 @@ function step(task: Effectful<void>) {
       throw exn;
     },
     effc(on) {
-      on(Xchg, (eff, k) => {
-        return pure({ done: false, msg: eff.msg, cont: k });
+      on(Xchg, ({ msg }, cont) => {
+        return pure({ done: false, msg, cont });
       });
     },
   });

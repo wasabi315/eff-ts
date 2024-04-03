@@ -2,6 +2,7 @@
 // Non-local control flows can be implemented with effect handlers.
 
 import {
+  Continuation,
   Effect,
   Effectful,
   matchWith,
@@ -30,9 +31,9 @@ function run<T>(comp: Effectful<T>) {
       throw exn;
     },
     effc(on) {
-      on(Defer, (eff, k) => {
+      on(Defer, (eff: Defer, cont: Continuation<void, T>) => {
         thunks.unshift(eff.thunk);
-        return k.continue();
+        return cont.continue();
       });
     },
   });
