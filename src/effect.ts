@@ -90,18 +90,14 @@ export function matchWith<T, S>(
 
       const cont = createCont(comp);
 
-      const sym = Symbol();
-      try {
-        handler.effc((ctor, handler) => {
-          if (res.value instanceof ctor) {
-            throw [sym, handler(res.value, cont)];
-          }
-        });
-      } catch (handled) {
-        if (handled?.[0] === sym) {
-          return yield* (handled[1] as Effectful<S>);
+      const handled: Array<() => Effectful<S>> = [];
+      handler.effc((ctor, handler) => {
+        if (res.value instanceof ctor) {
+          handled[0] = handler.bind(null, res.value, cont);
         }
-        throw handled;
+      });
+      if (handled[0]) {
+        return yield* handled[0]();
       }
 
       try {
