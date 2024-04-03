@@ -25,7 +25,7 @@ export type Continuation<T, S> = {
 // deno-lint-ignore no-explicit-any
 type Constructor<T> = new (..._: any) => T;
 
-export type EffectCallbackSetter<S> = <E extends Effect<unknown>>(
+export type EffectHandlerSetter<S> = <E extends Effect<unknown>>(
   eff: Constructor<E>,
   handler: (eff: E, cont: Continuation<EffectReturnType<E>, S>) => Effectful<S>,
 ) => void;
@@ -36,7 +36,7 @@ export type Handler<T, S> = {
   /** Handles exceptions. */
   exnc(err: unknown): S;
   /** Handles effects performed by a computation enclosed by this handler. */
-  effc(on: EffectCallbackSetter<S>): void;
+  effc(on: EffectHandlerSetter<S>): void;
 };
 
 export type SimpleHandler<T> = Pick<Handler<T, T>, "effc">;
@@ -90,14 +90,18 @@ export function matchWith<T, S>(
 
       const cont = createCont(comp);
 
+      const sym = Symbol();
       try {
         handler.effc((ctor, handler) => {
           if (res.value instanceof ctor) {
-            throw handler(res.value, cont);
+            throw [sym, handler(res.value, cont)];
           }
         });
       } catch (handled) {
-        return yield* (handled as Effectful<S>);
+        if (handled?.[0] === sym) {
+          return yield* (handled[1] as Effectful<S>);
+        }
+        throw handled;
       }
 
       try {
