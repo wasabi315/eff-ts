@@ -28,8 +28,8 @@ function step(task: Effectful<void>) {
     exnc(exn) {
       throw exn;
     },
-    effc(reg) {
-      reg.register(Xchg, (eff, k) => {
+    effc(on) {
+      on(Xchg, (eff, k) => {
         return pure({ done: false, msg: eff.msg, cont: k });
       });
     },

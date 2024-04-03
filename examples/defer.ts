@@ -29,8 +29,8 @@ function run<T>(comp: Effectful<T>) {
       thunks.forEach((thunk) => thunk());
       throw exn;
     },
-    effc(match) {
-      return match.register(Defer, (eff, k) => {
+    effc(on) {
+      on(Defer, (eff, k) => {
         thunks.unshift(eff.thunk);
         return k.continue();
       });

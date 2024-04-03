@@ -4,18 +4,18 @@
 export type Effectful<T> = Generator<Effect<unknown>, T>;
 
 /**
- * The base class for all effects. Extend this class to create a new effect.
+ * The base class of effects. Extend this class to create a new effect.
  * @typeParam T The return type of the effect.
  */
 export class Effect<T> {
-  // To make `EffectReturnType` to work.
+  // In order to make `EffectReturnType` work.
   #_T!: T;
 }
 
-type ReturnType<E> = E extends Effect<infer T> ? T : never;
+type EffectReturnType<E> = E extends Effect<infer T> ? T : never;
 
 /**
- * `Continuation<T, S>` is a continuation that expects a `T` value and returns an `S` value performing effects.
+ * `Continuation<T, S>` is a continuation that expects a value of type `T` and returns a value of type `S` after performing effects.
  */
 export type Continuation<T, S> = {
   continue(arg: T): Effectful<S>;
@@ -25,12 +25,10 @@ export type Continuation<T, S> = {
 // deno-lint-ignore no-explicit-any
 type Constructor<T> = new (..._: any) => T;
 
-export type HandlerRegistry<S> = {
-  register<E extends Effect<unknown>>(
-    eff: Constructor<E>,
-    handler: (eff: E, k: Continuation<ReturnType<E>, S>) => Effectful<S>,
-  ): void;
-};
+export type EffectCallbackSetter<S> = <E extends Effect<unknown>>(
+  eff: Constructor<E>,
+  handler: (eff: E, cont: Continuation<EffectReturnType<E>, S>) => Effectful<S>,
+) => void;
 
 export type Handler<T, S> = {
   /** Processes the return value of a computation enclosed by this handler. */
@@ -38,12 +36,12 @@ export type Handler<T, S> = {
   /** Handles exceptions. */
   exnc(err: unknown): S;
   /** Handles effects performed by a computation enclosed by this handler. */
-  effc(registry: HandlerRegistry<S>): void;
+  effc(on: EffectCallbackSetter<S>): void;
 };
 
 export type SimpleHandler<T> = Pick<Handler<T, T>, "effc">;
 
-/** A do-nothing `Effectful` computation. */
+/** Lift a value to an `Effectful` computation.  */
 export function pure(): Effectful<void>;
 /** Lift a value to an `Effectful` computation.  */
 export function pure<T>(x: T): Effectful<T>;
@@ -55,8 +53,8 @@ export function* pure<T>(x?: T): Effectful<void | T> {
 /** Performs an effect. */
 export function* perform<E extends Effect<unknown>>(
   eff: E,
-): Effectful<ReturnType<E>> {
-  return (yield eff) as ReturnType<E>;
+): Effectful<EffectReturnType<E>> {
+  return (yield eff) as EffectReturnType<E>;
 }
 
 /** Runs an effectful computation. */
@@ -78,12 +76,10 @@ export function matchWith<T, S>(
   handler: Handler<T, S>,
 ): Effectful<S> {
   function* attachHandler(comp: Effectful<T>): Effectful<S> {
-    let next = () => comp.next();
-
     while (true) {
       let res!: IteratorResult<Effect<unknown>, T>;
       try {
-        res = next();
+        res = comp.next();
       } catch (err) {
         return handler.exnc(err);
       }
@@ -92,25 +88,23 @@ export function matchWith<T, S>(
         return handler.retc(res.value);
       }
 
-      const handleds: Effectful<S>[] = [];
       const cont = createCont(comp);
-      handler.effc({
-        register(ctor, handler) {
+
+      try {
+        handler.effc((ctor, handler) => {
           if (res.value instanceof ctor) {
-            handleds.push(handler(res.value, cont));
+            throw handler(res.value, cont);
           }
-        },
-      });
-      const handled = handleds.shift();
-      if (typeof handled !== "undefined") {
-        return yield* handled;
+        });
+      } catch (handled) {
+        return yield* (handled as Effectful<S>);
       }
 
       try {
         const x = yield res.value;
-        next = () => comp.next(x);
+        comp = setFirstNextCall(comp, () => comp.next(x));
       } catch (err) {
-        next = () => comp.throw(err);
+        comp = setFirstNextCall(comp, () => comp.throw(err));
       }
     }
   }

@@ -8,8 +8,7 @@ import {
 } from "../effect.ts";
 
 /**
- * An effect that waits for a `Promise` fulfilled.
- * Enables us to write asynchronous computations without the built-in async-await construct.
+ * An effect that waits for a `Promise` to be fulfilled.
  * @typeParam T The type of a value to be returned by the `Promise`.
  */
 class WaitFor<T> extends Effect<T> {
@@ -31,9 +30,9 @@ export function runAsync<T>(comp: Effectful<T>) {
     const chainPromise = matchWith(comp, {
       retc: resolve,
       exnc: reject,
-      effc(reg) {
-        reg.register(WaitFor, (eff, k) => {
-          eff.promise.then(
+      effc(on) {
+        on(WaitFor, ({ promise }, k) => {
+          promise.then(
             (x) => runEffectful(k.continue(x)),
             (err) => runEffectful(k.discontinue(err)),
           );

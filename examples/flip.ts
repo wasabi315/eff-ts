@@ -12,8 +12,8 @@ const flip = () => perform(new Flip());
 
 function runFlip<T>(prob: number, comp: Effectful<T>) {
   return tryWith(comp, {
-    effc(match) {
-      return match.register(Flip, (_, k) => k.continue(Math.random() < prob));
+    effc(on) {
+      on(Flip, (_, k) => k.continue(Math.random() < prob));
     },
   });
 }

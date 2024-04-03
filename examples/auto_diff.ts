@@ -38,29 +38,29 @@ function run(f: Effectful<Ad>): void {
     exnc(err) {
       throw err;
     },
-    effc(reg) {
-      reg.register(Add, function* (eff, k) {
+    effc(on) {
+      on(Add, function* (eff, k) {
         const x = mk(eff.lhs.value + eff.rhs.value);
         yield* k.continue(x);
         eff.lhs.deriv += x.deriv;
         eff.rhs.deriv += x.deriv;
         return x;
       });
-      reg.register(Sub, function* (eff, k) {
+      on(Sub, function* (eff, k) {
         const x = mk(eff.lhs.value - eff.rhs.value);
         yield* k.continue(x);
         eff.lhs.deriv += x.deriv;
         eff.rhs.deriv -= x.deriv;
         return x;
       });
-      reg.register(Mul, function* (eff, k) {
+      on(Mul, function* (eff, k) {
         const x = mk(eff.lhs.value * eff.rhs.value);
         yield* k.continue(x);
         eff.lhs.deriv += eff.rhs.value * x.deriv;
         eff.rhs.deriv += eff.lhs.value * x.deriv;
         return x;
       });
-      reg.register(Div, function* (eff, k) {
+      on(Div, function* (eff, k) {
         const x = mk(eff.lhs.value / eff.rhs.value);
         yield* k.continue(x);
         eff.lhs.deriv += x.deriv / eff.rhs.value;
@@ -73,7 +73,7 @@ function run(f: Effectful<Ad>): void {
 }
 
 class Expr {
-  constructor(public expr: () => Effectful<Ad>) {}
+  private constructor(private expr: () => Effectful<Ad>) {}
 
   static mk(x: Ad) {
     return new Expr(() => pure(x));
@@ -93,20 +93,20 @@ class Expr {
   sub = this.#mkBinOp((x, y) => new Sub(x, y));
   mul = this.#mkBinOp((x, y) => new Mul(x, y));
   div = this.#mkBinOp((x, y) => new Div(x, y));
+
+  diff() {
+    return run(this.expr());
+  }
 }
 
-type SetTupleElem<T extends unknown[], S> = {
-  [K in keyof T]: S;
-};
-
-function grad<Exprs extends Expr[]>(
-  f: (...args: Exprs) => Expr,
-  ...args: SetTupleElem<Exprs, number>
-): SetTupleElem<Exprs, number> {
+function grad<T extends Expr[]>(
+  f: (...args: T) => Expr,
+  ...args: { [_ in keyof T]: number }
+): { [_ in keyof T]: number } {
   const ads = args.map(mk);
-  const exprs = ads.map(Expr.mk) as Exprs;
-  run(f(...exprs).expr());
-  return ads.map(({ deriv }) => deriv) as SetTupleElem<Exprs, number>;
+  const exprs = ads.map(Expr.mk) as T;
+  f(...exprs).diff();
+  return ads.map(({ deriv }) => deriv) as ReturnType<typeof grad<T>>;
 }
 
 // f(x) = x^2 + x^3

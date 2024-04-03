@@ -8,7 +8,7 @@ import { Effect, Effectful, perform, tryWith } from "../effect.ts";
 export function State<S>() {
   class Get extends Effect<S> {}
   class Put extends Effect<void> {
-    constructor(public state: S) {
+    constructor(public s: S) {
       super();
     }
   }
@@ -24,11 +24,11 @@ export function State<S>() {
 
   /** Runs a stateful computation under a provided initial state. */
   function run<T>(init: S, comp: Effectful<T>) {
-    let state: S = init;
+    let curr: S = init;
     return tryWith(comp, {
-      effc(reg) {
-        reg.register(Get, (_, k) => k.continue(state));
-        reg.register(Put, (eff, k) => k.continue(void (state = eff.state)));
+      effc(on) {
+        on(Get, (_, k) => k.continue(curr));
+        on(Put, ({ s }, k) => k.continue(void (curr = s)));
       },
     });
   }

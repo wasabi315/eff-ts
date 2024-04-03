@@ -14,13 +14,11 @@ export function Reader<R>() {
   /** Runs a computation under a given environment of value. */
   function run<T>(env: R, comp: Effectful<T>) {
     return tryWith(comp, {
-      effc(reg) {
-        reg.register(Ask, (_, k) => k.continue(env));
+      effc(on) {
+        on(Ask, (_, k) => k.continue(env));
       },
     });
   }
-
-  // TODO: Add the `local` functionality.
 
   return { ask, run };
 }
