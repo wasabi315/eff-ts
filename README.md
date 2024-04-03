@@ -58,7 +58,7 @@ Here is explained how to define and use effects using `Defer` as an example. The
         },
     ```
 
-    `effc` is the *effect handler*, which gets called when the computation performs effects. `on`, the argument of `effc`, is for registering handlers for each effect. The first argument of `on` is the constructor of an effect (say `E`) and the second argument is a handler function that takes an effect value of type `E` and its continuation. In this example, save the thunk carried before resuming the computation. Note that you do not need to handle all of the effects in one handler. Effects not handled are passed to the surrounding handler like `try`-`catch`.
+    `effc` is the *effect handler*, which gets called when the computation performs effects. `on`, the argument of `effc`, is for registering handlers for each effect. The first argument of `on` is the constructor of an effect (say `E`) and the second argument is a handler function that takes an effect value of type `E` and its continuation. In this example, save the thunk carried before resuming the computation. Note that you do not need to handle all of effects in one handler. Effects not handled are passed to the surrounding handler.
 
     ```typescript
         effc(on) {
@@ -115,6 +115,20 @@ Here is explained how to define and use effects using `Defer` as an example. The
 
     ```typescript
     runEffectful(runDefer(main()));
+    /* Output:
+    counting
+    done
+    9
+    8
+    7
+    6
+    5
+    4
+    3
+    2
+    1
+    0
+    */
     ```
 
 For more examples, including the `state` effects, see the [examples](https://github.com/wasabi315/eff-ts/tree/main/examples) directory.
