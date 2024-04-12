@@ -2,7 +2,7 @@ import { Effect, Effectful, perform, tryWith } from "../effect.ts";
 
 /**
  * The Reader effect.
- * Each call of this function returns operations on a distinct Reader so you can mix multiple Readers.
+ * Each call to this function returns operations on a separate environment, allowing you to mix multiple Readers.
  * @typeParam R The type of a value read by computations as a shared environment.
  */
 export function Reader<R>() {

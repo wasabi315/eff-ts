@@ -77,7 +77,7 @@ export function matchWith<T, S>(
 ): Effectful<S> {
   function* attachHandler(comp: Effectful<T>): Effectful<S> {
     while (true) {
-      let res!: IteratorResult<Effect<unknown>, T>;
+      let res: IteratorResult<Effect<unknown>, T>;
       try {
         res = comp.next();
       } catch (err) {
@@ -102,29 +102,26 @@ export function matchWith<T, S>(
 
       try {
         const x = yield res.value;
-        comp = setFirstNextCall(comp, () => comp.next(x));
+        comp = _continue(comp, x);
       } catch (err) {
-        comp = setFirstNextCall(comp, () => comp.throw(err));
+        comp = discontinue(comp, err);
       }
     }
   }
 
   function createCont(comp: Effectful<T>): Continuation<unknown, S> {
-    let resumed = false;
     return {
       continue(x) {
-        if (resumed) {
+        this.continue = this.discontinue = () => {
           throw new Error("Continuation already resumed");
-        }
-        resumed = true;
-        return attachHandler(setFirstNextCall(comp, () => comp.next(x)));
+        };
+        return attachHandler(_continue(comp, x));
       },
       discontinue(exn) {
-        if (resumed) {
+        this.continue = this.discontinue = () => {
           throw new Error("Continuation already resumed");
-        }
-        resumed = true;
-        return attachHandler(setFirstNextCall(comp, () => comp.throw(exn)));
+        };
+        return attachHandler(discontinue(comp, exn));
       },
     };
   }
@@ -152,9 +149,9 @@ export function tryWith<T>(
   });
 }
 
-function setFirstNextCall<T, S>(
+function _continue<T, S>(
   gen: Generator<T, S>,
-  next: () => IteratorResult<T, S>,
+  x: unknown,
 ): Generator<T, S> {
   return {
     [Symbol.iterator]() {
@@ -162,7 +159,24 @@ function setFirstNextCall<T, S>(
     },
     next() {
       this.next = gen.next.bind(gen);
-      return next();
+      return gen.next(x);
+    },
+    return: gen.return.bind(gen),
+    throw: gen.throw.bind(gen),
+  };
+}
+
+function discontinue<T, S>(
+  gen: Generator<T, S>,
+  exn: unknown,
+): Generator<T, S> {
+  return {
+    [Symbol.iterator]() {
+      return this;
+    },
+    next() {
+      this.next = gen.next.bind(gen);
+      return gen.throw(exn);
     },
     return: gen.return.bind(gen),
     throw: gen.throw.bind(gen),

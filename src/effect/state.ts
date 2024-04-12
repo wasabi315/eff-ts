@@ -2,7 +2,7 @@ import { Effect, Effectful, perform, tryWith } from "../effect.ts";
 
 /**
  * The State effect.
- * Each call of this function returns operations on a distinct State so you can mix multiple States.
+ * Each call to this function returns operations on a separate state, allowing you to mix multiple States.
  * @typeParam S The type of the state.
  */
 export function State<S>() {
@@ -28,7 +28,10 @@ export function State<S>() {
     return tryWith(comp, {
       effc(on) {
         on(Get, (_, k) => k.continue(curr));
-        on(Put, ({ s }, k) => k.continue(void (curr = s)));
+        on(Put, ({ s }, k) => {
+          curr = s;
+          return k.continue();
+        });
       },
     });
   }
