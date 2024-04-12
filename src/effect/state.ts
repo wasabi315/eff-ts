@@ -1,13 +1,19 @@
-import { Effect, Effectful, perform, tryWith } from "../effect.ts";
+import {
+  Effect,
+  Effectful,
+  LabeledEffect,
+  perform,
+  tryWith,
+} from "../effect.ts";
 
 /**
  * The State effect.
  * Each call to this function returns operations on a separate state, allowing you to mix multiple States.
  * @typeParam S The type of the state.
  */
-export function State<S>() {
-  class Get extends Effect<S> {}
-  class Put extends Effect<void> {
+export function State<L extends string extends L ? never : string, S>() {
+  class Get extends LabeledEffect<L, S> {}
+  class Put extends LabeledEffect<L, void> {
     constructor(public s: S) {
       super();
     }
@@ -18,14 +24,14 @@ export function State<S>() {
   /** Sets the state to a new value. */
   const put = (state: S) => perform(new Put(state));
   /** Modifies the state with a given function. */
-  function* modify(f: (s: S) => S): Effectful<void> {
+  function* modify(f: (s: S) => S) {
     yield* put(f(yield* get()));
   }
 
   /** Runs a stateful computation under a provided initial state. */
-  function run<T>(init: S, comp: Effectful<T>) {
+  function run<ER extends Effect, T>(init: S, comp: Effectful<ER, T>) {
     let curr: S = init;
-    return tryWith(comp, {
+    return tryWith<ER, Get | Put, T>(comp, {
       effc(on) {
         on(Get, (_, k) => k.continue(curr));
         on(Put, ({ s }, k) => {

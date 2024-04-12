@@ -17,8 +17,8 @@ export const raise = (error: unknown) => perform(new Raise(error));
 export type Result<T, S> = { ok: true; value: T } | { ok: false; error: S };
 
 /** Turns a computation that raises an exception into one that returns a `Result` value. */
-export function runAsResult<T>(comp: Effectful<T>) {
-  return matchWith<T, Result<T, unknown>>(comp, {
+export function runAsResult<ER extends Effect, T>(comp: Effectful<ER, T>) {
+  return matchWith<ER, Raise, T, Result<T, unknown>>(comp, {
     retc(value) {
       return { ok: true, value };
     },

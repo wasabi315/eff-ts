@@ -9,9 +9,9 @@ import {
 
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-const S1 = State<number>();
-const S2 = State<string>();
-const R = Reader<number>();
+const S1 = State<"S1", number>();
+const S2 = State<"S2", string>();
+const R = Reader<"R", number>();
 
 function* main() {
   // You can have multiple different states.

@@ -2,7 +2,6 @@
 // Non-local control flows can be implemented with effect handlers.
 
 import {
-  Continuation,
   Effect,
   Effectful,
   matchWith,
@@ -18,10 +17,10 @@ class Defer extends Effect<void> {
 
 const defer = (thunk: () => void) => perform(new Defer(thunk));
 
-function run<T>(comp: Effectful<T>) {
+function run<ER extends Effect, T>(comp: Effectful<ER, T>) {
   const thunks: (() => void)[] = [];
 
-  return matchWith(comp, {
+  return matchWith<ER, Defer, T, T>(comp, {
     retc(x) {
       thunks.forEach((thunk) => thunk());
       return x;
@@ -31,7 +30,7 @@ function run<T>(comp: Effectful<T>) {
       throw exn;
     },
     effc(on) {
-      on(Defer, (eff: Defer, cont: Continuation<void, T>) => {
+      on(Defer, (eff, cont) => {
         thunks.unshift(eff.thunk);
         return cont.continue();
       });

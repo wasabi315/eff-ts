@@ -18,9 +18,9 @@ class Xchg extends Effect<number> {
 
 type Status =
   | { done: true }
-  | { done: false; msg: number; cont: Continuation<number, Status> };
+  | { done: false; msg: number; cont: Continuation<number, never, Status> };
 
-function step(task: Effectful<void>) {
+function step(task: Effectful<Xchg, void>) {
   return matchWith(task, {
     retc(): Status {
       return { done: true };
@@ -37,9 +37,9 @@ function step(task: Effectful<void>) {
 }
 
 function* runBoth(
-  steps1: Effectful<Status>,
-  steps2: Effectful<Status>,
-): Effectful<void> {
+  steps1: Effectful<never, Status>,
+  steps2: Effectful<never, Status>,
+): Effectful<never, void> {
   const [status1, status2] = [yield* steps1, yield* steps2];
   if (status1.done && status2.done) {
     return;
@@ -53,7 +53,7 @@ function* runBoth(
   throw new Error("Improper synchronization");
 }
 
-function* task(name: string, n: number): Effectful<void> {
+function* task(name: string, n: number): Effectful<Xchg, void> {
   if (n === 0) {
     return;
   }

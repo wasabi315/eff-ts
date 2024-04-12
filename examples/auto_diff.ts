@@ -29,7 +29,7 @@ class Sub extends BinOp {}
 class Mul extends BinOp {}
 class Div extends BinOp {}
 
-function run(f: Effectful<Ad>): void {
+function run(f: Effectful<BinOp, Ad>): void {
   runEffectful(matchWith(f, {
     retc(r) {
       r.deriv = 1;
@@ -73,13 +73,13 @@ function run(f: Effectful<Ad>): void {
 }
 
 class Expr {
-  private constructor(private expr: () => Effectful<Ad>) {}
+  private constructor(private expr: () => Effectful<BinOp, Ad>) {}
 
   static mk(x: Ad) {
     return new Expr(() => pure(x));
   }
 
-  #mkBinOp = (eff: (x: Ad, y: Ad) => Effect<Ad>) => {
+  #mkBinOp = (eff: (x: Ad, y: Ad) => BinOp) => {
     return (rhs: this) => {
       return new Expr((function* (this: Expr) {
         const x = yield* this.expr();

@@ -11,7 +11,7 @@ import {
  * An effect that waits for a `Promise` to be fulfilled.
  * @typeParam T The type of a value to be returned by the `Promise`.
  */
-class WaitFor<T> extends Effect<T> {
+class WaitFor<T = unknown> extends Effect<T> {
   constructor(public promise: Promise<T>) {
     super();
   }
@@ -25,7 +25,7 @@ export const waitFor = <T>(promise: Promise<T>) =>
  * Runs an asynchronous computation.
  * Note that this runner can only be outermost or an exception will be thrown.
  */
-export function runAsync<T>(comp: Effectful<T>) {
+export function runAsync<T>(comp: Effectful<WaitFor, T>) {
   return new Promise<T>((resolve, reject) => {
     const chainPromise = matchWith(comp, {
       retc: resolve,
