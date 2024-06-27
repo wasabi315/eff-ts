@@ -75,11 +75,13 @@ export function matchWith<T, S>(
   comp: Effectful<T>,
   handler: Handler<T, S>,
 ): Effectful<S> {
-  function* attachHandler(comp: Effectful<T>): Effectful<S> {
+  let next = () => comp.next();
+
+  function* loop(): Effectful<S> {
     while (true) {
       let res: IteratorResult<Effect<unknown>, T>;
       try {
-        res = comp.next();
+        res = next();
       } catch (err) {
         return handler.exnc(err);
       }
@@ -88,45 +90,47 @@ export function matchWith<T, S>(
         return handler.retc(res.value);
       }
 
-      const cont = createCont(comp);
+      const eff = res.value;
+      let resumed = false;
+      const cont = {
+        continue(x: unknown) {
+          if (resumed) {
+            throw new Error("Continuation already resumed");
+          }
+          resumed = true;
+          next = () => comp.next(x);
+          return loop();
+        },
+        discontinue(err: unknown) {
+          if (resumed) {
+            throw new Error("Continuation already resumed");
+          }
+          resumed = true;
+          next = () => comp.throw(err);
+          return loop();
+        },
+      };
 
-      const handled: Array<() => Effectful<S>> = [];
+      const handled: Array<Effectful<S>> = [];
       handler.effc((ctor, handler) => {
-        if (res.value instanceof ctor) {
-          handled[0] = handler.bind(null, res.value, cont);
+        if (eff instanceof ctor) {
+          handled.push(handler(eff, cont));
         }
       });
       if (handled[0]) {
-        return yield* handled[0]();
+        return yield* handled[0];
       }
 
       try {
-        const x = yield res.value;
-        comp = _continue(comp, x);
+        const x = yield eff;
+        next = () => comp.next(x);
       } catch (err) {
-        comp = discontinue(comp, err);
+        next = () => comp.throw(err);
       }
     }
   }
 
-  function createCont(comp: Effectful<T>): Continuation<unknown, S> {
-    return {
-      continue(x) {
-        this.continue = this.discontinue = () => {
-          throw new Error("Continuation already resumed");
-        };
-        return attachHandler(_continue(comp, x));
-      },
-      discontinue(exn) {
-        this.continue = this.discontinue = () => {
-          throw new Error("Continuation already resumed");
-        };
-        return attachHandler(discontinue(comp, exn));
-      },
-    };
-  }
-
-  return attachHandler(comp);
+  return loop();
 }
 
 /**
@@ -147,38 +151,4 @@ export function tryWith<T>(
     },
     effc: handler.effc,
   });
-}
-
-function _continue<T, S>(
-  gen: Generator<T, S>,
-  x: unknown,
-): Generator<T, S> {
-  return {
-    [Symbol.iterator]() {
-      return this;
-    },
-    next() {
-      this.next = gen.next.bind(gen);
-      return gen.next(x);
-    },
-    return: gen.return.bind(gen),
-    throw: gen.throw.bind(gen),
-  };
-}
-
-function discontinue<T, S>(
-  gen: Generator<T, S>,
-  exn: unknown,
-): Generator<T, S> {
-  return {
-    [Symbol.iterator]() {
-      return this;
-    },
-    next() {
-      this.next = gen.next.bind(gen);
-      return gen.throw(exn);
-    },
-    return: gen.return.bind(gen),
-    throw: gen.throw.bind(gen),
-  };
 }
