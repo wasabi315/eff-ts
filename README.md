@@ -28,7 +28,7 @@ Here is explained how to define and use effects using `Defer` as an example. The
 3. Define a handler for the `Defer` effect using `matchWith`. `matchWith` is like `try`-`catch` in JavaScript, but for effects.
 
     ```typescript
-    function runDefer<T>(comp: Effectful<E, T>) {
+    function runDefer<T>(comp: Effectful<T>) {
       // Save thunks to be executed later.
       const thunks: (() => void)[] = [];
     ```
@@ -74,7 +74,7 @@ Here is explained how to define and use effects using `Defer` as an example. The
     Here is the full code for the `runDefer` function.
 
     ```typescript
-    function runDefer<T>(comp: Effectful<E, T>) {
+    function runDefer<T>(comp: Effectful<T>) {
       // Save thunks to be executed later.
       const thunks: (() => void)[] = [];
       return matchWith(comp, {
