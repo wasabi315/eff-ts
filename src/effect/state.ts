@@ -11,13 +11,14 @@ import {
  * Each call to this function returns operations on a separate state, allowing you to mix multiple States.
  * @typeParam S The type of the state.
  */
-export function State<L extends string extends L ? never : string, S>() {
+export function State<L extends string, S>() {
   class Get extends LabeledEffect<L, S> {}
   class Put extends LabeledEffect<L, void> {
     constructor(public s: S) {
       super();
     }
   }
+  type State = Get | Put;
 
   /** Reads the current state. */
   const get = () => perform(new Get());
@@ -29,9 +30,9 @@ export function State<L extends string extends L ? never : string, S>() {
   }
 
   /** Runs a stateful computation under a provided initial state. */
-  function run<ER extends Effect, T>(init: S, comp: Effectful<ER, T>) {
+  function run<Row extends Effect, T>(init: S, comp: Effectful<Row, T>) {
     let curr: S = init;
-    return tryWith<ER, Get | Put, T>(comp, {
+    return tryWith<Row, State, T>(comp, {
       effc(on) {
         on(Get, (_, k) => k.continue(curr));
         on(Put, ({ s }, k) => {

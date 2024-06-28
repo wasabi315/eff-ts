@@ -1,5 +1,5 @@
 /**
- * `Effectful<T>` is an computation that returns a `T` value performing effects.
+ * `Effectful<T>` is an computation that returns a `T` value performing `E` effects.
  */
 export type Effectful<E extends Effect, T> = Generator<E, T>;
 
@@ -15,13 +15,12 @@ export class Effect<T = unknown> {
 type EffectReturnType<E> = E extends Effect<infer T> ? T : never;
 
 /**
- * A subclass of `Effect` annotated with a label `L`.
+ * A subclass of `Effect` branded with a label `L`.
  * Use this in order to distinguish multiple effects of the same type.
  * @typeParam L The label of the effect.
  * @typeParam T The return type of the effect.
  */
-export class LabeledEffect<L extends string extends L ? never : string, T>
-  extends Effect<T> {
+export class LabeledEffect<L extends string, T> extends Effect<T> {
   // In order to make `Exclude` work.
   #_L!: L;
 }
@@ -37,27 +36,27 @@ export type Continuation<T, E extends Effect, S> = {
 // deno-lint-ignore no-explicit-any
 type Constructor<T> = new (..._: any) => T;
 
-export type EffectHandlerSetter<ER extends Effect, EH extends Effect, S> = <
+export type EffectHandlerSetter<Row extends Effect, EH extends Effect, S> = <
   E extends EH,
 >(
   eff: Constructor<E>,
   handler: (
     eff: E,
-    cont: Continuation<EffectReturnType<E>, Exclude<ER, EH>, S>,
-  ) => Effectful<Exclude<ER, EH>, S>,
+    cont: Continuation<EffectReturnType<E>, Exclude<Row, EH>, S>,
+  ) => Effectful<Exclude<Row, EH>, S>,
 ) => void;
 
-export type Handler<ER extends Effect, EH extends Effect, T, S> = {
-  /** Processes the return value of a computation enclosed by this handler. */
+export type Handler<Row extends Effect, EH extends Effect, T, S> = {
+  /** Processes the return value of a computation delimited by this handler. */
   retc(x: T): S;
   /** Handles exceptions. */
   exnc(err: unknown): S;
-  /** Handles effects performed by a computation enclosed by this handler. */
-  effc(on: EffectHandlerSetter<ER, EH, S>): void;
+  /** Handles effects performed by a computation delimited by this handler. */
+  effc(on: EffectHandlerSetter<Row, EH, S>): void;
 };
 
-export type SimpleHandler<ER extends Effect, EH extends Effect, T> = Pick<
-  Handler<ER, EH, T, T>,
+export type SimpleHandler<Row extends Effect, EH extends Effect, T> = Pick<
+  Handler<Row, EH, T, T>,
   "effc"
 >;
 
@@ -91,17 +90,17 @@ export function runEffectful<T>(comp: Effectful<never, T>): T {
  * @param comp A computation to run.
  * @param handler A `Handlers` that handle effects performed by `comp`.
  */
-export function matchWith<ER extends Effect, EH extends Effect, T, S>(
-  comp: Effectful<ER, T>,
-  handler: Handler<ER, EH, T, S>,
-): Effectful<Exclude<ER, EH>, S> {
-  function* attachHandler(
-    comp: Effectful<ER, T>,
-  ): Effectful<Exclude<ER, EH>, S> {
+export function matchWith<Row extends Effect, EH extends Effect, T, S>(
+  comp: Effectful<Row, T>,
+  handler: Handler<Row, EH, T, S>,
+): Effectful<Exclude<Row, EH>, S> {
+  let next = () => comp.next();
+
+  function* loop(): Effectful<Exclude<Row, EH>, S> {
     while (true) {
       let res: IteratorResult<Effect<unknown>, T>;
       try {
-        res = comp.next();
+        res = next();
       } catch (err) {
         return handler.exnc(err);
       }
@@ -110,47 +109,47 @@ export function matchWith<ER extends Effect, EH extends Effect, T, S>(
         return handler.retc(res.value);
       }
 
-      const cont = createCont(comp);
+      const eff = res.value;
+      let resumed = false;
+      const cont = {
+        continue(x: unknown) {
+          if (resumed) {
+            throw new Error("Continuation already resumed");
+          }
+          resumed = true;
+          next = () => comp.next(x);
+          return loop();
+        },
+        discontinue(err: unknown) {
+          if (resumed) {
+            throw new Error("Continuation already resumed");
+          }
+          resumed = true;
+          next = () => comp.throw(err);
+          return loop();
+        },
+      };
 
-      const handled: Array<() => Effectful<Exclude<ER, EH>, S>> = [];
+      const handled: Array<Effectful<Exclude<Row, EH>, S>> = [];
       handler.effc((ctor, handler) => {
-        if (res.value instanceof ctor) {
-          handled[0] = handler.bind(null, res.value, cont);
+        if (eff instanceof ctor) {
+          handled.push(handler(eff, cont));
         }
       });
       if (handled[0]) {
-        return yield* handled[0]();
+        return yield* handled[0];
       }
 
       try {
-        const x = yield res.value as Exclude<ER, EH>;
-        comp = _continue(comp, x);
+        const x = yield eff as Exclude<Row, EH>;
+        next = () => comp.next(x);
       } catch (err) {
-        comp = discontinue(comp, err);
+        next = () => comp.throw(err);
       }
     }
   }
 
-  function createCont(
-    comp: Effectful<ER, T>,
-  ): Continuation<unknown, Exclude<ER, EH>, S> {
-    return {
-      continue(x) {
-        this.continue = this.discontinue = () => {
-          throw new Error("Continuation already resumed");
-        };
-        return attachHandler(_continue(comp, x));
-      },
-      discontinue(exn) {
-        this.continue = this.discontinue = () => {
-          throw new Error("Continuation already resumed");
-        };
-        return attachHandler(discontinue(comp, exn));
-      },
-    };
-  }
-
-  return attachHandler(comp);
+  return loop();
 }
 
 /**
@@ -158,10 +157,10 @@ export function matchWith<ER extends Effect, EH extends Effect, T, S>(
  * @param comp A computation to run.
  * @param handler An `EffectHandlers` that handle effects performed by `comp`.
  */
-export function tryWith<ER extends Effect, EH extends Effect, T>(
-  comp: Effectful<ER, T>,
-  handler: SimpleHandler<ER, EH, T>,
-): Effectful<Exclude<ER, EH>, T> {
+export function tryWith<Row extends Effect, EH extends Effect, T>(
+  comp: Effectful<Row, T>,
+  handler: SimpleHandler<Row, EH, T>,
+): Effectful<Exclude<Row, EH>, T> {
   return matchWith(comp, {
     retc(x) {
       return x;
@@ -171,38 +170,4 @@ export function tryWith<ER extends Effect, EH extends Effect, T>(
     },
     effc: handler.effc,
   });
-}
-
-function _continue<T, S>(
-  gen: Generator<T, S>,
-  x: unknown,
-): Generator<T, S> {
-  return {
-    [Symbol.iterator]() {
-      return this;
-    },
-    next() {
-      this.next = gen.next.bind(gen);
-      return gen.next(x);
-    },
-    return: gen.return.bind(gen),
-    throw: gen.throw.bind(gen),
-  };
-}
-
-function discontinue<T, S>(
-  gen: Generator<T, S>,
-  exn: unknown,
-): Generator<T, S> {
-  return {
-    [Symbol.iterator]() {
-      return this;
-    },
-    next() {
-      this.next = gen.next.bind(gen);
-      return gen.throw(exn);
-    },
-    return: gen.return.bind(gen),
-    throw: gen.throw.bind(gen),
-  };
 }

@@ -17,10 +17,10 @@ class Defer extends Effect<void> {
 
 const defer = (thunk: () => void) => perform(new Defer(thunk));
 
-function run<ER extends Effect, T>(comp: Effectful<ER, T>) {
+function run<Row extends Effect, T>(comp: Effectful<Row, T>) {
   const thunks: (() => void)[] = [];
 
-  return matchWith<ER, Defer, T, T>(comp, {
+  return matchWith<Row, Defer, T, T>(comp, {
     retc(x) {
       thunks.forEach((thunk) => thunk());
       return x;

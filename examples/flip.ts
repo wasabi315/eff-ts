@@ -10,8 +10,8 @@ class Flip extends Effect<boolean> {}
 
 const flip = () => perform(new Flip());
 
-function runFlip<ER extends Effect, T>(prob: number, comp: Effectful<ER, T>) {
-  return tryWith<ER, Flip, T>(comp, {
+function runFlip<Row extends Effect, T>(prob: number, comp: Effectful<Row, T>) {
+  return tryWith<Row, Flip, T>(comp, {
     effc(on) {
       on(Flip, (_, k) => k.continue(Math.random() < prob));
     },
