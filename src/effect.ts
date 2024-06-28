@@ -1,13 +1,13 @@
 /**
  * `Effectful<T>` is an computation that returns a `T` value performing effects.
  */
-export type Effectful<T> = Generator<Effect<unknown>, T>;
+export type Effectful<T> = Generator<Effect, T>;
 
 /**
  * The base class of effects. Extend this class to create a new effect.
  * @typeParam T The return type of the effect.
  */
-export class Effect<T> {
+export class Effect<T = unknown> {
   // In order to make `EffectReturnType` work.
   #_T!: T;
 }
@@ -25,7 +25,7 @@ export type Continuation<T, S> = {
 // deno-lint-ignore no-explicit-any
 type Constructor<T> = new (..._: any) => T;
 
-export type EffectHandlerSetter<S> = <E extends Effect<unknown>>(
+export type EffectHandlerSetter<S> = <E extends Effect>(
   eff: Constructor<E>,
   handler: (eff: E, cont: Continuation<EffectReturnType<E>, S>) => Effectful<S>,
 ) => void;
@@ -51,7 +51,7 @@ export function* pure<T>(x?: T): Effectful<void | T> {
 }
 
 /** Performs an effect. */
-export function* perform<E extends Effect<unknown>>(
+export function* perform<E extends Effect>(
   eff: E,
 ): Effectful<EffectReturnType<E>> {
   return (yield eff) as EffectReturnType<E>;
@@ -79,7 +79,7 @@ export function matchWith<T, S>(
 
   function* loop(): Effectful<S> {
     while (true) {
-      let res: IteratorResult<Effect<unknown>, T>;
+      let res: IteratorResult<Effect, T>;
       try {
         res = next();
       } catch (err) {
