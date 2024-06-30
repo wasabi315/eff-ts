@@ -26,21 +26,16 @@ export const waitFor = <T>(promise: Promise<T>) =>
  * Note that this runner can only be outermost or an exception will be thrown.
  */
 export function runAsync<T>(comp: Effectful<T>) {
-  return new Promise<T>((resolve, reject) => {
-    const chainPromise = matchWith(comp, {
-      retc: resolve,
-      exnc: reject,
-      effc(on) {
-        on(WaitFor, ({ promise }, k) => {
-          promise.then(
-            (x) => runEffectful(k.continue(x)),
-            (err) => runEffectful(k.discontinue(err)),
-          );
-          return pure();
-        });
-      },
-    });
-
-    runEffectful(chainPromise);
-  });
+  return runEffectful(matchWith(comp, {
+    retc: (x) => Promise.resolve(x),
+    exnc: Promise.reject,
+    effc(on) {
+      on(WaitFor, ({ promise }, k) => {
+        return pure(promise.then(
+          (x) => runEffectful(k.continue(x)),
+          (err) => runEffectful(k.discontinue(err)),
+        ));
+      });
+    },
+  }));
 }
